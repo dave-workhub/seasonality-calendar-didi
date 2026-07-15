@@ -68,11 +68,7 @@ insert into calendar_events (city_slug, start_date, end_date, category, title) v
   ('saltillo', '2026-06-15', null, 'high_demand_celebration', 'Fathers Day'),
   ('saltillo', '2026-07-16', '2026-08-25', 'school_break', 'School Break'),
   ('saltillo', '2026-08-26', null, 'back_to_school', 'Back to School'),
-  ('saltillo', '2026-09-15', null, 'other_event', 'Independence Day Bridge'),
   ('saltillo', '2026-10-31', null, 'other_event', 'Halloween Weekend'),
-  ('saltillo', '2026-11-02', null, 'official_holiday', 'Day of the Dead'),
-  ('saltillo', '2026-12-24', null, 'official_holiday', 'Christmas Eve'),
-  ('saltillo', '2026-12-31', null, 'official_holiday', 'New Years Eve'),
 
   -- Mérida (MX)
   ('merida', '2026-02-05', null, 'other_event', 'Eladio Carrion Concert'),
@@ -87,11 +83,11 @@ insert into calendar_events (city_slug, start_date, end_date, category, title) v
   ('merida', '2026-06-15', null, 'high_demand_celebration', 'Fathers Day'),
   ('merida', '2026-07-16', '2026-08-25', 'school_break', 'School Break'),
   ('merida', '2026-08-26', null, 'back_to_school', 'Back to School'),
-  ('merida', '2026-09-15', null, 'other_event', 'Independence Day Bridge'),
   ('merida', '2026-10-31', null, 'other_event', 'Halloween Weekend'),
-  ('merida', '2026-11-02', null, 'official_holiday', 'Day of the Dead'),
-  ('merida', '2026-12-24', null, 'official_holiday', 'Christmas Eve'),
-  ('merida', '2026-12-31', null, 'official_holiday', 'New Years Eve'),
+
+  -- Hermosillo (MX) — no city-specific concerts/festivals known yet; only the shared MX dates
+  ('hermosillo', '2026-06-11', null, 'other_event', 'World Cup starts'),
+  ('hermosillo', '2026-10-31', null, 'other_event', 'Halloween Weekend'),
 
   -- Bogotá (CO) — concerts carried over from the original calendario-festivos.html
   ('bogota', '2026-02-10', null, 'other_event', 'My Chemical Romance – Vive Claro'),

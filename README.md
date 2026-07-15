@@ -56,7 +56,8 @@ npm run dev
 - [x] Fase 1: scaffold, festivos/semana ISO/conciertos migrados, dropdown cluster→ciudad con selección persistida
   - Deploy en producción: https://seasonality-calendar.vercel.app
   - GitHub↔Vercel conectado — cada push a `main` redespliega automáticamente
-- [ ] Fase 2: modelo de datos completo por ciudad para todo CASA + Indigo (afinar festivos MX/CR/EC con fuente oficial, cargar School Break/Back to School faltantes)
+- [x] Fase 2 (parcial): festivos oficiales 2026 de CO/CL/PE/MX/CR tomados del calendario interno de DiDi (IBG D-Hub), reemplazando el cálculo algorítmico para ese año. Ecuador (Quito) sigue en estimación algorítmica — no está en la fuente oficial de DiDi.
+  - Pendiente: School Break / Back to School / High Demand para las ciudades CASA que aún no tienen data curada (Barranquilla, Cali, Pereira, Bucaramanga, San José, Quito, Concepción, Región Metropolitana) y Hermosillo (solo tiene las fechas compartidas de MX, faltan eventos propios de la ciudad)
 - [ ] Fase 3: sync automático de festivos desde la fuente oficial (Google Sites / Sheets del equipo)
 - [ ] Fase 4: budget semanal y demanda histórica YoY por ciudad (depende de acceso a Sheets/SQL por fuente)
 - [ ] Fase 5: insights de demanda esperada por ciudad/semana usando YoY

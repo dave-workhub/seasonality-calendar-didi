@@ -58,7 +58,73 @@ function nthWeekday(y: number, m: number, weekday: number, n: number): Date {
   return D(y, m, 1 + offset + (n - 1) * 7);
 }
 
+/**
+ * Official 2026 holiday calendar as published by DiDi's internal IBG D-Hub
+ * (sites.google.com/didi-labs.com/dihubssl/orange-zone/holidays-2026).
+ * Takes precedence over the algorithmic estimate below for 2026. Not
+ * available for Ecuador (Quito) — that source has no EC entry, so EC
+ * still falls back to the algorithmic estimate and should be verified
+ * manually.
+ *
+ * Two Peru dates ("Day of Peruvian Air Force" and "Santa Rosa de Lima")
+ * were rendered without a day number on the source page (a formatting
+ * glitch there, not on our end) — filled in with their well-known
+ * historical dates (Jul 23 and Aug 30) pending confirmation.
+ *
+ * Mexico's "11-Jun World Cup" entry on that page isn't an actual paid
+ * holiday, so it's modeled as a curated `other_event` in Supabase
+ * instead of a national holiday here.
+ */
+const OFFICIAL_2026: Partial<Record<CountryCode, [number, number, string][]>> = {
+  CO: [
+    [0, 1, 'Año Nuevo'], [0, 12, 'Reyes Magos'], [2, 23, 'San José'],
+    [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
+    [4, 18, 'Ascensión del Señor'], [5, 8, 'Corpus Christi'], [5, 15, 'Sagrado Corazón'],
+    [5, 29, 'San Pedro y San Pablo'], [6, 13, 'Virgen del Rosario de Chiquinquirá'],
+    [6, 20, 'Independencia Nacional'], [7, 7, 'Batalla de Boyacá'], [7, 17, 'Asunción de la Virgen'],
+    [9, 12, 'Día de la Raza'], [10, 2, 'Todos los Santos'], [10, 16, 'Independencia de Cartagena'],
+    [11, 8, 'Inmaculada Concepción'], [11, 25, 'Navidad'],
+  ],
+  CL: [
+    [0, 1, 'Año Nuevo'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
+    [4, 21, 'Glorias Navales'], [5, 29, 'San Pedro y San Pablo'], [6, 16, 'Virgen del Carmen'],
+    [7, 15, 'Asunción de la Virgen'], [8, 18, 'Fiestas Patrias'], [8, 19, 'Glorias del Ejército'],
+    [9, 12, 'Encuentro de Dos Mundos'], [9, 31, 'Día de las Iglesias Evangélicas'],
+    [10, 1, 'Todos los Santos'], [11, 8, 'Inmaculada Concepción'], [11, 24, 'Nochebuena'],
+    [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+  ],
+  PE: [
+    [0, 1, 'Año Nuevo'], [0, 6, 'Reyes Magos'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'],
+    [4, 1, 'Día del Trabajo'], [5, 8, 'Batalla de Arica'], [5, 29, 'San Pedro y San Pablo'],
+    [6, 23, 'Día de la Fuerza Aérea del Perú'], [6, 28, 'Fiestas Patrias – Día 1'],
+    [6, 29, 'Fiestas Patrias – Día 2'], [7, 6, 'Batalla de Junín'], [7, 30, 'Santa Rosa de Lima'],
+    [9, 8, 'Combate de Angamos'], [10, 2, 'Todos los Santos'], [11, 8, 'Inmaculada Concepción'],
+    [11, 9, 'Batalla de Ayacucho'], [11, 25, 'Navidad'],
+  ],
+  MX: [
+    [0, 1, 'Año Nuevo'], [1, 2, 'Día de la Constitución'], [2, 16, 'Natalicio de Benito Juárez'],
+    [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
+    [8, 15, 'Independencia (puente)'], [8, 16, 'Día de la Independencia'],
+    [10, 2, 'Día de Muertos'], [10, 16, 'Día de la Revolución'],
+    [11, 24, 'Nochebuena'], [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+  ],
+  CR: [
+    [0, 1, 'Año Nuevo'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [3, 13, 'Día de Juan Santamaría'],
+    [4, 1, 'Día del Trabajo'], [6, 27, 'Día de Guanacaste'],
+    [7, 31, 'Día de la Persona Negra y la Cultura Afrocostarricense'],
+    [8, 14, 'Independencia (víspera)'], [8, 15, 'Día de la Independencia'],
+    [11, 1, 'Abolición del Ejército'], [11, 24, 'Nochebuena'], [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+  ],
+};
+
 export function getHolidays(country: CountryCode, y: number): HolidayEntry[] {
+  const official = OFFICIAL_2026[country];
+  if (y === 2026 && official) {
+    return official
+      .map(([month, day, name]) => ({ month, day, name }))
+      .sort((a, b) => a.month - b.month || a.day - b.day);
+  }
+
   const out: HolidayEntry[] = [];
   const push = (dt: Date, name: string) => out.push({ month: dt.getMonth(), day: dt.getDate(), name });
   const E = easter(y);
@@ -135,7 +201,6 @@ export function getHolidays(country: CountryCode, y: number): HolidayEntry[] {
       push(addDays(E, -3), 'Jueves Santo');
       push(addDays(E, -2), 'Viernes Santo');
       push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 4, 5), 'Batalla de Puebla');
       push(D(y, 8, 15), 'Independencia (víspera)');
       push(D(y, 8, 16), 'Día de la Independencia');
       push(nthWeekday(y, 10, 1, 3), 'Día de la Revolución');
