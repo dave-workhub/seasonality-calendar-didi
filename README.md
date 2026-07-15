@@ -54,6 +54,8 @@ npm run dev
 
 ## Roadmap
 - [x] Fase 1: scaffold, festivos/semana ISO/conciertos migrados, dropdown cluster→ciudad con selección persistida
+  - Deploy en producción: https://seasonality-calendar.vercel.app
+  - GitHub↔Vercel conectado — cada push a `main` redespliega automáticamente
 - [ ] Fase 2: modelo de datos completo por ciudad para todo CASA + Indigo (afinar festivos MX/CR/EC con fuente oficial, cargar School Break/Back to School faltantes)
 - [ ] Fase 3: sync automático de festivos desde la fuente oficial (Google Sites / Sheets del equipo)
 - [ ] Fase 4: budget semanal y demanda histórica YoY por ciudad (depende de acceso a Sheets/SQL por fuente)
