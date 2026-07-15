@@ -15,7 +15,7 @@ const STORAGE_KEY = 'seasonality-calendar-selection';
 type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
 
 const CATEGORY_META: Record<Category, { label: string; dot: string; cell: string }> = {
-  official_holiday: { label: 'Official Holidays', dot: 'bg-teal-500', cell: 'bg-teal-500 text-white' },
+  official_holiday: { label: 'Official Holidays', dot: 'bg-[#FD7C41]', cell: 'bg-[#FD7C41] text-white font-bold' },
   high_demand_celebration: { label: 'High Demand Celebrations', dot: 'bg-emerald-500', cell: 'bg-emerald-500 text-white' },
   school_break: { label: 'School Break', dot: 'bg-amber-400', cell: 'bg-amber-400 text-black' },
   back_to_school: { label: 'Back to School', dot: 'bg-violet-500', cell: 'bg-violet-500 text-white' },
@@ -121,6 +121,11 @@ export default function Home() {
       }
       return info;
     };
+
+    // Seed every day of the year so plain paycheck/bonus days (no holiday or event) still show up.
+    for (const cursor = new Date(year, 0, 1); cursor.getFullYear() === year; cursor.setDate(cursor.getDate() + 1)) {
+      ensure(new Date(cursor));
+    }
 
     for (const h of holidays) {
       const d = new Date(year, h.month, h.day);
@@ -295,7 +300,7 @@ function MonthGrid({
             if (info?.holidayName) tipParts.push(info.holidayName);
             if (info?.isPaycheck) tipParts.push('💰 Paycheck');
             if (info?.bonusName) tipParts.push('🎁 ' + info.bonusName);
-            for (const c of info?.categories ?? []) tipParts.push(`${CATEGORY_META[c.category].label}: ${c.title}`);
+            for (const c of info?.categories ?? []) tipParts.push(c.title);
             const tipText = tipParts.join(' · ');
 
             const emojis = (info?.isPaycheck ? '💰' : '') + (info?.bonusName ? '🎁' : '');
