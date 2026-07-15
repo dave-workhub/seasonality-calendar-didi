@@ -148,7 +148,8 @@ export default function Home() {
   const { city, cluster } = resolved;
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-8 bg-white text-neutral-900 min-h-screen">
+    <div className="w-full min-h-screen bg-white text-neutral-900">
+    <div className="max-w-[1400px] mx-auto px-6 py-8">
       <h1 className="text-center text-2xl font-extrabold text-neutral-900 mb-6">
         Calendario de {city.name} ({cluster.name}) con festivos
       </h1>
@@ -231,6 +232,7 @@ export default function Home() {
           {tooltip.text}
         </div>
       )}
+    </div>
     </div>
   );
 }
