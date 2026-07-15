@@ -232,7 +232,12 @@ export default function Home() {
             {year + 1} ›
           </button>
         </div>
-        {loading && <span className="text-xs text-neutral-400">Cargando eventos…</span>}
+      </div>
+
+      <div className="h-4 text-center mb-2">
+        <span className={`text-xs text-neutral-400 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
+          Cargando eventos…
+        </span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
@@ -252,13 +257,9 @@ export default function Home() {
         ))}
       </div>
 
-      {holidaySource && (
+      {holidaySource === 'algorithmic-fallback' && (
         <div className="text-center text-[11px] text-neutral-400 mt-2">
-          {holidaySource === 'nager.date' ? (
-            <>Festivos en vivo vía <a href="https://date.nager.at" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#FD7C41]">Nager.Date</a> (API pública, sin autenticación)</>
-          ) : (
-            <>⚠ Nager.Date no respondió — mostrando estimación algorítmica local</>
-          )}
+          ⚠ Festivos no disponibles en este momento — mostrando estimación local
         </div>
       )}
 
