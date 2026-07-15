@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CLUSTERS, findCity } from '@/lib/cities';
-import { getHolidays, isoWeek, getPaycheckDates, getBonusDates } from '@/lib/holidays';
+import { isoWeek, getPaycheckDates, getBonusDates, HolidayEntry } from '@/lib/holidays';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -60,6 +60,8 @@ export default function Home() {
   const [citySlug, setCitySlug] = useState<string>(() => readPersistedSelection()?.city ?? 'bogota');
   const [year, setYear] = useState<number>(2026);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [holidays, setHolidays] = useState<HolidayEntry[]>([]);
+  const [holidaySource, setHolidaySource] = useState<'nager.date' | 'algorithmic-fallback' | null>(null);
   const [loading, setLoading] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
@@ -91,10 +93,31 @@ export default function Home() {
     };
   }, [citySlug, year]);
 
+  useEffect(() => {
+    const city = findCity(citySlug);
+    if (!city) return;
+    let cancelled = false;
+    fetch(`/api/holidays?country=${city.city.country}&year=${year}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setHolidays(data.holidays ?? []);
+        setHolidaySource(data.source ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHolidays([]);
+          setHolidaySource(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [citySlug, year]);
+
   const dayMap = useMemo(() => {
     if (!resolved) return new Map<string, DayInfo>();
     const { city } = resolved;
-    const holidays = getHolidays(city.country, year);
     const holidaySet = new Set(holidays.map((h) => `${h.month}-${h.day}`));
     const paycheckSet = getPaycheckDates(year, holidaySet);
     const bonusDates = getBonusDates(city.country, year, holidaySet);
@@ -147,7 +170,7 @@ export default function Home() {
     }
 
     return map;
-  }, [resolved, year, events]);
+  }, [resolved, year, events, holidays]);
 
   if (!resolved) return null;
   const { city, cluster } = resolved;
@@ -228,6 +251,16 @@ export default function Home() {
           </span>
         ))}
       </div>
+
+      {holidaySource && (
+        <div className="text-center text-[11px] text-neutral-400 mt-2">
+          {holidaySource === 'nager.date' ? (
+            <>Festivos en vivo vía <a href="https://date.nager.at" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#FD7C41]">Nager.Date</a> (API pública, sin autenticación)</>
+          ) : (
+            <>⚠ Nager.Date no respondió — mostrando estimación algorítmica local</>
+          )}
+        </div>
+      )}
 
       {tooltip && (
         <div
