@@ -130,3 +130,49 @@ insert into calendar_events (city_slug, start_date, end_date, category, title) v
   ('valparaiso', '2026-07-25', null, 'other_event', 'Bersuit Vergarabat – Trotamundos'),
   ('valparaiso', '2026-08-30', null, 'other_event', 'THY ANTICHRIST – El Huevo')
 on conflict do nothing;
+
+-- ── Seed: school calendars for CASA cities (2026), from official ministry sources ──
+insert into calendar_events (city_slug, start_date, end_date, category, title, source_url) values
+  -- Colombia, Calendario A (Bogotá, Cali, Pereira, Bucaramanga) — MEN Circular 043 de 2025
+  ('bogota', '2026-06-22', '2026-07-05', 'school_break', 'Vacaciones de mitad de año', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('bogota', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('bogota', '2026-10-05', '2026-10-11', 'school_break', 'Semana de receso estudiantil', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+
+  ('cali', '2026-06-22', '2026-07-05', 'school_break', 'Vacaciones de mitad de año', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('cali', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('cali', '2026-10-05', '2026-10-11', 'school_break', 'Semana de receso estudiantil', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+
+  ('pereira', '2026-06-22', '2026-07-05', 'school_break', 'Vacaciones de mitad de año', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('pereira', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('pereira', '2026-10-05', '2026-10-11', 'school_break', 'Semana de receso estudiantil', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+
+  ('bucaramanga', '2026-06-22', '2026-07-05', 'school_break', 'Vacaciones de mitad de año', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('bucaramanga', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+  ('bucaramanga', '2026-10-05', '2026-10-11', 'school_break', 'Semana de receso estudiantil', 'https://www.mineducacion.gov.co/portal/micrositios-preescolar-basica-y-media/Matriculas/426215:Calendario-Escolar-2026'),
+
+  -- Perú (Lima) — cronograma oficial Minedu 2026
+  ('lima', '2026-05-18', '2026-05-22', 'school_break', 'Semana de gestión (receso)', 'https://larepublica.pe/sociedad/2026/05/06/ni-junio-ni-julio-estas-son-las-fechas-de-las-primeras-vacaciones-escolares-en-2026-segun-el-calendario-oficial-del-minedu-210618'),
+  ('lima', '2026-07-27', '2026-08-07', 'school_break', 'Vacaciones de medio año', 'https://larepublica.pe/sociedad/2026/07/09/vacaciones-de-mitad-de-ano-en-peru-2026-estas-son-las-fechas-para-colegios-publicos-y-privados-segun-el-calendario-oficial-de-minedu-225063'),
+  ('lima', '2026-08-10', null, 'back_to_school', 'Regreso a clases', 'https://larepublica.pe/sociedad/2026/07/09/vacaciones-de-mitad-de-ano-en-peru-2026-estas-son-las-fechas-para-colegios-publicos-y-privados-segun-el-calendario-oficial-de-minedu-225063'),
+  ('lima', '2026-10-12', '2026-10-16', 'school_break', 'Semana de gestión (receso)', 'https://larepublica.pe/sociedad/2026/07/09/vacaciones-de-mitad-de-ano-en-peru-2026-estas-son-las-fechas-para-colegios-publicos-y-privados-segun-el-calendario-oficial-de-minedu-225063'),
+
+  -- Chile (Valparaíso, Región Metropolitana, Concepción) — Mineduc, bloque "Centro" (incluye Valparaíso y Biobío)
+  ('valparaiso', '2026-06-22', '2026-07-03', 'school_break', 'Vacaciones de invierno', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+  ('valparaiso', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+
+  ('region-metropolitana', '2026-06-22', '2026-07-03', 'school_break', 'Vacaciones de invierno', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+  ('region-metropolitana', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+
+  ('concepcion', '2026-06-22', '2026-07-03', 'school_break', 'Vacaciones de invierno', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+  ('concepcion', '2026-07-06', null, 'back_to_school', 'Regreso a clases', 'https://www.mineduc.cl/ministerio-de-educacion-oficializa-el-calendario-escolar-2026/'),
+
+  -- Costa Rica (San José) — MEP calendario escolar 2026
+  ('san-jose', '2026-02-23', null, 'back_to_school', 'Inicio de lecciones', 'https://www.mep.go.cr/noticias/mep-presenta-calendario-escolar-2026'),
+  ('san-jose', '2026-03-29', '2026-04-05', 'school_break', 'Semana Santa', 'https://www.mep.go.cr/noticias/mep-presenta-calendario-escolar-2026'),
+  ('san-jose', '2026-07-06', '2026-07-17', 'school_break', 'Vacaciones de medio periodo', 'https://www.mep.go.cr/noticias/mep-presenta-calendario-escolar-2026'),
+  ('san-jose', '2026-07-20', null, 'back_to_school', 'Regreso a clases', 'https://www.mep.go.cr/noticias/mep-presenta-calendario-escolar-2026'),
+
+  -- Ecuador (Quito) — régimen Sierra, año lectivo 2025-2026 / 2026-2027
+  ('quito', '2026-06-26', '2026-08-31', 'school_break', 'Vacaciones estudiantiles (régimen Sierra)', 'https://www.primicias.ec/sociedad/vacaciones-escolares-sierra-ecuador-examenes-docentes-124237/'),
+  ('quito', '2026-09-01', null, 'back_to_school', 'Regreso a clases (año lectivo 2026-2027)', 'https://www.metroecuador.com.ec/noticias/2026/06/21/educacion-confirma-la-fecha-de-inicio-de-clases-para-el-ano-lectivo-2026-2027-en-la-sierra-y-amazonia/')
+on conflict do nothing;
