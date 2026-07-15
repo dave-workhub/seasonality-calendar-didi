@@ -15,10 +15,15 @@ create table if not exists calendar_events (
   )),
   title text not null,
   source_url text,
+  -- 'manual' (curated by hand, e.g. concerts) vs 'api-football' (synced weekly
+  -- by /api/cron/sync-sports) — lets the sync job safely replace only the
+  -- rows it owns without touching manually curated events.
+  source text not null default 'manual',
   created_at timestamptz not null default now()
 );
 
 create index if not exists calendar_events_city_idx on calendar_events (city_slug, start_date);
+create index if not exists calendar_events_source_idx on calendar_events (source);
 
 -- Read-only public access (this is non-sensitive scheduling data).
 alter table calendar_events enable row level security;
