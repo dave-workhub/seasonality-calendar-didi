@@ -311,3 +311,106 @@ insert into calendar_events (city_slug, start_date, end_date, category, title) v
   ('hermosillo', '2026-05-10', null, 'high_demand_celebration', 'Mothers Day'),
   ('hermosillo', '2026-06-15', null, 'high_demand_celebration', 'Fathers Day')
 on conflict do nothing;
+
+-- ══════════════════════════════════════════════════════════════════
+-- City manager editing: auth, per-city permissions, holiday overrides
+-- ══════════════════════════════════════════════════════════════════
+
+-- ── Profiles ──
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  is_admin boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+create or replace function is_admin() returns boolean
+language sql security definer stable as $$
+  select coalesce((select is_admin from profiles where id = auth.uid()), false);
+$$;
+
+drop policy if exists "read own or admin reads all profiles" on profiles;
+create policy "read own or admin reads all profiles" on profiles
+  for select using (auth.uid() = id or is_admin());
+
+-- Auto-create a profile row on signup; jacostamurcia@gmail.com is admin from day one.
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, email, is_admin)
+  values (new.id, new.email, new.email = 'jacostamurcia@gmail.com');
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
+-- ── City edit permissions ──
+create table if not exists city_permissions (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  city_slug text not null,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  requested_at timestamptz not null default now(),
+  decided_at timestamptz,
+  decided_by uuid references auth.users(id),
+  unique (user_id, city_slug)
+);
+
+alter table city_permissions enable row level security;
+
+drop policy if exists "read own requests or admin reads all" on city_permissions;
+create policy "read own requests or admin reads all" on city_permissions
+  for select using (auth.uid() = user_id or is_admin());
+
+drop policy if exists "request access to a city" on city_permissions;
+create policy "request access to a city" on city_permissions
+  for insert with check (auth.uid() = user_id and status = 'pending');
+
+drop policy if exists "admin decides requests" on city_permissions;
+create policy "admin decides requests" on city_permissions
+  for update using (is_admin()) with check (is_admin());
+
+drop policy if exists "admin deletes requests" on city_permissions;
+create policy "admin deletes requests" on city_permissions
+  for delete using (is_admin());
+
+-- Helper: does the current user have approved edit access to a given city?
+create or replace function can_edit_city(target_city text) returns boolean
+language sql security definer stable as $$
+  select is_admin() or exists (
+    select 1 from city_permissions
+    where user_id = auth.uid() and city_slug = target_city and status = 'approved'
+  );
+$$;
+
+-- ── Holiday overrides (hide a wrong live holiday, or rename/add a local one) ──
+create table if not exists holiday_overrides (
+  id bigint generated always as identity primary key,
+  city_slug text not null,
+  override_date date not null,
+  hidden boolean not null default false,
+  custom_name text,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  unique (city_slug, override_date)
+);
+
+alter table holiday_overrides enable row level security;
+
+drop policy if exists "public read holiday_overrides" on holiday_overrides;
+create policy "public read holiday_overrides" on holiday_overrides for select using (true);
+
+drop policy if exists "editors write holiday_overrides" on holiday_overrides;
+create policy "editors write holiday_overrides" on holiday_overrides
+  for all using (can_edit_city(city_slug)) with check (can_edit_city(city_slug));
+
+-- ── calendar_events: allow approved city editors / admin to write ──
+drop policy if exists "editors write calendar_events" on calendar_events;
+create policy "editors write calendar_events" on calendar_events
+  for all using (can_edit_city(city_slug)) with check (can_edit_city(city_slug));

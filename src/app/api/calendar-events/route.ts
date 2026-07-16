@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('calendar_events')
-    .select('start_date, end_date, category, title, source_url')
+    .select('id, start_date, end_date, category, title, source_url')
     .eq('city_slug', city)
     .gte('start_date', `${year}-01-01`)
     .lte('start_date', `${year}-12-31`)

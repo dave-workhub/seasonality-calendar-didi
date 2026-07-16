@@ -1,8 +1,21 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { CLUSTERS, findCity } from '@/lib/cities';
 import { isoWeek, getPaycheckDates, getBonusDates, HolidayEntry } from '@/lib/holidays';
+import { supabase } from '@/lib/supabaseClient';
+import AuthModal from './AuthModal';
+import EditPanel from './EditPanel';
+import AdminPanel from './AdminPanel';
+
+export interface Profile {
+  id: string;
+  email: string;
+  is_admin: boolean;
+}
+
+export type CityAccess = 'loading' | 'signed-out' | 'none' | 'pending' | 'approved' | 'admin';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -12,7 +25,14 @@ const DAY_HEADERS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
 
 const STORAGE_KEY = 'seasonality-calendar-selection';
 
-type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
+export type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
+
+export const EDITABLE_CATEGORIES: Category[] = [
+  'high_demand_celebration',
+  'school_break',
+  'back_to_school',
+  'other_event',
+];
 
 // Muted palette — same hues as the DiDi orange accent, dialed back so a
 // month full of markers doesn't read as visual noise.
@@ -24,7 +44,8 @@ const CATEGORY_META: Record<Category, { label: string; dot: string; cell: string
   other_event: { label: 'Other Events (Fairs, Concerts, Sports, etc.)', dot: 'bg-[#A9C0D8]', cell: 'bg-[#A9C0D8] text-[#2C4562]' },
 };
 
-interface CalendarEvent {
+export interface CalendarEvent {
+  id: number;
   start_date: string;
   end_date: string | null;
   category: Category;
@@ -67,6 +88,77 @@ export default function CalendarApp() {
   const [loading, setLoading] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const [dataVersion, setDataVersion] = useState(0);
+  const refreshData = () => setDataVersion((v) => v + 1);
+
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [cityAccess, setCityAccess] = useState<CityAccess>('signed-out');
+  const [showAuth, setShowAuth] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  // Track auth session.
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Load the signed-in user's profile (admin flag).
+  useEffect(() => {
+    if (!supabase || !session) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset derived state when the session goes away
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('id, email, is_admin')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        if (!cancelled) setProfile(data as Profile | null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  // Resolve this user's edit access to the currently selected city.
+  useEffect(() => {
+    if (!supabase) return;
+    if (!session) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset derived state when the session goes away
+      setCityAccess('signed-out');
+      return;
+    }
+    if (!profile) {
+      setCityAccess('loading');
+      return;
+    }
+    if (profile.is_admin) {
+      setCityAccess('admin');
+      return;
+    }
+    let cancelled = false;
+    setCityAccess('loading');
+    supabase
+      .from('city_permissions')
+      .select('status')
+      .eq('user_id', session.user.id)
+      .eq('city_slug', citySlug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCityAccess(data ? (data.status as CityAccess) : 'none');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, profile, citySlug, dataVersion]);
 
   const headerRef = useRef<HTMLDivElement>(null);
   const gridWrapRef = useRef<HTMLDivElement>(null);
@@ -155,13 +247,13 @@ export default function CalendarApp() {
     return () => {
       cancelled = true;
     };
-  }, [citySlug, year]);
+  }, [citySlug, year, dataVersion]);
 
   useEffect(() => {
     const city = findCity(citySlug);
     if (!city) return;
     let cancelled = false;
-    fetch(`/api/holidays?country=${city.city.country}&year=${year}`)
+    fetch(`/api/holidays?country=${city.city.country}&year=${year}&city=${citySlug}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -177,7 +269,7 @@ export default function CalendarApp() {
     return () => {
       cancelled = true;
     };
-  }, [citySlug, year]);
+  }, [citySlug, year, dataVersion]);
 
   const dayMap = useMemo(() => {
     if (!resolved) return new Map<string, DayInfo>();
@@ -236,9 +328,24 @@ export default function CalendarApp() {
     return map;
   }, [resolved, year, events, holidays]);
 
+  async function requestCityAccess() {
+    if (!supabase || !session) return;
+    setCityAccess('loading');
+    await supabase.from('city_permissions').insert({ user_id: session.user.id, city_slug: citySlug });
+    refreshData();
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setShowEdit(false);
+    setShowAdmin(false);
+  }
+
   if (!resolved) return null;
 
   return (
+    <>
     <div className="w-full min-h-screen bg-white text-neutral-900 flex flex-col">
     <div ref={headerRef} className="max-w-[1500px] mx-auto w-full px-8 lg:px-14 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -298,6 +405,48 @@ export default function CalendarApp() {
           </span>
         </div>
       </div>
+
+      <div className="flex items-center justify-end gap-2 mb-2 text-xs">
+        {profile?.is_admin && (
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
+          >
+            Admin
+          </button>
+        )}
+
+        {cityAccess === 'admin' || cityAccess === 'approved' ? (
+          <button
+            onClick={() => setShowEdit(true)}
+            className="px-2.5 py-1 rounded-md bg-[#FD7C41] text-white font-medium hover:bg-[#e86d34] transition-colors"
+          >
+            Editar {resolved!.city.name}
+          </button>
+        ) : cityAccess === 'pending' ? (
+          <span className="px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-400">Solicitud pendiente</span>
+        ) : cityAccess === 'none' ? (
+          <button
+            onClick={requestCityAccess}
+            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
+          >
+            Solicitar acceso a {resolved!.city.name}
+          </button>
+        ) : null}
+
+        {session ? (
+          <span className="flex items-center gap-1.5 text-neutral-400">
+            {session.user.email}
+            <button onClick={signOut} className="underline hover:text-[#FD7C41]">
+              Salir
+            </button>
+          </span>
+        ) : (
+          <button onClick={() => setShowAuth(true)} className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors">
+            Iniciar sesión
+          </button>
+        )}
+      </div>
     </div>
 
     <div className="flex-1 flex flex-col justify-center">
@@ -340,6 +489,23 @@ export default function CalendarApp() {
     </div>
     </div>
     </div>
+
+    {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+
+    {showEdit && resolved && (
+      <EditPanel
+        citySlug={citySlug}
+        cityName={resolved.city.name}
+        year={year}
+        events={events}
+        holidays={holidays}
+        onClose={() => setShowEdit(false)}
+        onChanged={refreshData}
+      />
+    )}
+
+    {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+    </>
   );
 }
 
