@@ -176,3 +176,138 @@ insert into calendar_events (city_slug, start_date, end_date, category, title, s
   ('quito', '2026-06-26', '2026-08-31', 'school_break', 'Vacaciones estudiantiles (régimen Sierra)', 'https://www.primicias.ec/sociedad/vacaciones-escolares-sierra-ecuador-examenes-docentes-124237/'),
   ('quito', '2026-09-01', null, 'back_to_school', 'Regreso a clases (año lectivo 2026-2027)', 'https://www.metroecuador.com.ec/noticias/2026/06/21/educacion-confirma-la-fecha-de-inicio-de-clases-para-el-ano-lectivo-2026-2027-en-la-sierra-y-amazonia/')
 on conflict do nothing;
+
+-- ── Seed: concerts/events for the remaining CASA cities (2026) ──
+insert into calendar_events (city_slug, start_date, end_date, category, title) values
+  -- Cali (CO)
+  ('cali', '2026-03-21', null, 'other_event', 'J Balvin – Estadio Pascual Guerrero'),
+  ('cali', '2026-04-25', null, 'other_event', 'Grupo Firme "La Última Peda" – Estadio Pascual Guerrero'),
+  ('cali', '2026-08-22', null, 'other_event', 'Ryan Castro – Estadio Pascual Guerrero'),
+  ('cali', '2026-09-11', null, 'other_event', 'Caifanes – Arena Cañaveralejo'),
+  ('cali', '2026-10-31', null, 'other_event', 'Bunbury – Arena Cañaveralejo'),
+  ('cali', '2026-11-21', null, 'other_event', 'Carlos Vives – Arena Cañaveralejo'),
+
+  -- Bucaramanga (CO)
+  ('bucaramanga', '2026-08-29', null, 'other_event', 'Ryan Castro – Estadio José Américo Montanini'),
+  ('bucaramanga', '2026-10-16', null, 'other_event', 'Carlos Vives "Tour al Sol" – CENFER'),
+
+  -- Pereira (CO)
+  ('pereira', '2026-08-15', '2026-08-30', 'other_event', 'Fiestas de la Cosecha'),
+  ('pereira', '2026-08-14', null, 'other_event', 'Candlelight: Hans Zimmer & Rock Classics – Teatro Santiago Londoño'),
+  ('pereira', '2026-09-26', null, 'other_event', 'Candlelight: Tributo a Bad Bunny – Teatro Santiago Londoño'),
+  ('pereira', '2026-11-06', null, 'other_event', 'Carlos Vives "Tour al Sol" – Expofuturo'),
+  ('pereira', '2026-12-20', null, 'other_event', 'Candlelight: Christmas Classics – Teatro Santiago Londoño'),
+
+  -- Región Metropolitana / Santiago (CL)
+  ('region-metropolitana', '2026-07-24', '2026-07-29', 'other_event', 'Rosalía LUX Tour (4 shows) – Movistar Arena'),
+  ('region-metropolitana', '2026-10-02', null, 'other_event', 'ZAYN – Movistar Arena'),
+  ('region-metropolitana', '2026-10-09', null, 'other_event', 'Trueno – Movistar Arena'),
+  ('region-metropolitana', '2026-10-14', null, 'other_event', 'BTS – Estadio Nacional'),
+  ('region-metropolitana', '2026-10-31', '2026-11-01', 'other_event', 'Iron Maiden – Estadio Nacional'),
+  ('region-metropolitana', '2026-11-21', null, 'other_event', 'Babasónicos – Movistar Arena'),
+  ('region-metropolitana', '2026-12-03', null, 'other_event', 'Babymetal – Movistar Arena'),
+  ('region-metropolitana', '2026-12-08', null, 'other_event', 'Deep Purple – Movistar Arena'),
+
+  -- Concepción (CL)
+  ('concepcion', '2026-02-07', null, 'other_event', 'Chayanne – Estadio Ester Roa Rebolledo'),
+
+  -- San José (CR)
+  ('san-jose', '2026-03-18', null, 'other_event', 'Tyler, The Creator – Parque Viva'),
+  ('san-jose', '2026-03-25', null, 'other_event', 'The Killers – Parque Viva'),
+  ('san-jose', '2026-03-27', null, 'other_event', 'Ricardo Montaner – Parque Viva'),
+  ('san-jose', '2026-04-29', null, 'other_event', 'Laura Pausini – Estadio Nacional'),
+  ('san-jose', '2026-05-30', null, 'other_event', 'Ed Sheeran LOOP Tour – Estadio Nacional'),
+  ('san-jose', '2026-08-14', '2026-08-15', 'other_event', 'Ricardo Arjona – Estadio Nacional'),
+  ('san-jose', '2026-08-21', null, 'other_event', 'Romeo Santos & Prince Royce – Estadio Nacional'),
+  ('san-jose', '2026-10-08', null, 'other_event', 'Iron Maiden – Estadio Nacional'),
+  ('san-jose', '2026-11-18', null, 'other_event', 'Eros Ramazzotti – Estadio Nacional'),
+  ('san-jose', '2026-11-27', null, 'other_event', 'Martin Garrix – Parque Viva'),
+
+  -- Quito (EC)
+  ('quito', '2026-01-23', null, 'other_event', 'Santiago Cruz – Coliseo Rumiñahui'),
+  ('quito', '2026-02-19', null, 'other_event', 'Alejandro Sanz – Estadio Atahualpa'),
+  ('quito', '2026-05-21', null, 'other_event', 'Ricardo Montaner – Coliseo Rumiñahui'),
+  ('quito', '2026-05-23', null, 'other_event', 'Ed Sheeran LOOP Tour – Estadio Atahualpa'),
+  ('quito', '2026-07-31', null, 'other_event', 'Festival Llacta Flow (Beele) – Coliseo Rumiñahui'),
+  ('quito', '2026-08-06', null, 'other_event', 'Ricardo Arjona – Estadio Atahualpa'),
+  ('quito', '2026-09-22', null, 'other_event', 'Carlos Vives – Coliseo Rumiñahui'),
+  ('quito', '2026-09-23', null, 'other_event', 'TINI – Coliseo Rumiñahui'),
+  ('quito', '2026-10-09', null, 'other_event', 'Grupo Frontera – Coliseo Rumiñahui'),
+  ('quito', '2026-10-14', null, 'other_event', 'Iron Maiden – Estadio Atahualpa'),
+  ('quito', '2026-11-15', null, 'other_event', 'Cypress Hill – Coliseo Rumiñahui')
+on conflict do nothing;
+
+-- Halloween was miscategorized as other_event when first seeded — it belongs in
+-- high_demand_celebration alongside Mother's/Father's Day etc.
+update calendar_events set category = 'high_demand_celebration'
+  where category = 'other_event' and title ilike 'Halloween%';
+
+-- ── Seed: High Demand Celebrations (non-holiday days with a demand spike) ──
+-- Dates verified per country for 2026; Colombia's "Amor y Amistad" is NOT
+-- Feb 14 like the rest of the region — it's the 3rd Saturday of September.
+insert into calendar_events (city_slug, start_date, end_date, category, title) values
+  -- Colombia (Bogotá, Cali, Pereira, Bucaramanga, Barranquilla)
+  ('bogota', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('bogota', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('bogota', '2026-09-19', null, 'high_demand_celebration', 'Día del Amor y la Amistad'),
+  ('bogota', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('cali', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('cali', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('cali', '2026-09-19', null, 'high_demand_celebration', 'Día del Amor y la Amistad'),
+  ('cali', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('pereira', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('pereira', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('pereira', '2026-09-19', null, 'high_demand_celebration', 'Día del Amor y la Amistad'),
+  ('pereira', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('bucaramanga', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('bucaramanga', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('bucaramanga', '2026-09-19', null, 'high_demand_celebration', 'Día del Amor y la Amistad'),
+  ('bucaramanga', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('barranquilla', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('barranquilla', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('barranquilla', '2026-09-19', null, 'high_demand_celebration', 'Día del Amor y la Amistad'),
+  ('barranquilla', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  -- Chile (Valparaíso, Región Metropolitana, Concepción)
+  ('valparaiso', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('valparaiso', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('valparaiso', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('valparaiso', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('region-metropolitana', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('region-metropolitana', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('region-metropolitana', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('region-metropolitana', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  ('concepcion', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('concepcion', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('concepcion', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('concepcion', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  -- Perú (Lima)
+  ('lima', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('lima', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('lima', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('lima', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  -- Costa Rica (San José) — Día de la Madre es el 15 de agosto, fecha fija
+  ('san-jose', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('san-jose', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('san-jose', '2026-08-15', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('san-jose', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  -- Ecuador (Quito)
+  ('quito', '2026-02-14', null, 'high_demand_celebration', 'San Valentín'),
+  ('quito', '2026-05-10', null, 'high_demand_celebration', 'Día de la Madre'),
+  ('quito', '2026-06-21', null, 'high_demand_celebration', 'Día del Padre'),
+  ('quito', '2026-10-31', null, 'high_demand_celebration', 'Halloween'),
+
+  -- Hermosillo (MX, Indigo) — mismas fechas que Saltillo/Mérida (fuente del equipo)
+  ('hermosillo', '2026-02-14', null, 'high_demand_celebration', 'Valentines Day'),
+  ('hermosillo', '2026-05-10', null, 'high_demand_celebration', 'Mothers Day'),
+  ('hermosillo', '2026-06-15', null, 'high_demand_celebration', 'Fathers Day')
+on conflict do nothing;
