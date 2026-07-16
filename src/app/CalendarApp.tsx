@@ -6,7 +6,8 @@ import { CLUSTERS, findCity } from '@/lib/cities';
 import { isoWeek, getPaycheckDates, getBonusDates, HolidayEntry } from '@/lib/holidays';
 import { supabase } from '@/lib/supabaseClient';
 import AuthModal from './AuthModal';
-import EditPanel from './EditPanel';
+import HolidaysPanel from './EditPanel';
+import DayEventModal from './DayEventModal';
 import AdminPanel from './AdminPanel';
 
 export interface Profile {
@@ -15,7 +16,7 @@ export interface Profile {
   is_admin: boolean;
 }
 
-export type CityAccess = 'loading' | 'signed-out' | 'none' | 'pending' | 'approved' | 'admin';
+export type CityAccess = 'loading' | 'signed-out' | 'none' | 'pending' | 'approved' | 'rejected' | 'admin';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -27,22 +28,23 @@ const STORAGE_KEY = 'seasonality-calendar-selection';
 
 export type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
 
-export const EDITABLE_CATEGORIES: Category[] = [
-  'high_demand_celebration',
-  'school_break',
-  'back_to_school',
-  'other_event',
-];
+// back_to_school is intentionally excluded: it's implied by the day right
+// after each school_break ends, so it's not offered as its own event type
+// or rendered on the grid anymore.
+export const EDITABLE_CATEGORIES: Category[] = ['high_demand_celebration', 'school_break', 'other_event'];
 
-// Muted palette — same hues as the DiDi orange accent, dialed back so a
-// month full of markers doesn't read as visual noise.
+// Palette per Juan: bright red for official holidays, orange for high-demand
+// days, green for other events, blue for school breaks.
 const CATEGORY_META: Record<Category, { label: string; dot: string; cell: string }> = {
-  official_holiday: { label: 'Official Holidays', dot: 'bg-[#F4A97C]', cell: 'bg-[#F4A97C] text-[#7A3A12] font-semibold' },
-  high_demand_celebration: { label: 'High Demand Celebrations', dot: 'bg-[#A9CBAE]', cell: 'bg-[#A9CBAE] text-[#33502F]' },
-  school_break: { label: 'School Break', dot: 'bg-[#EBD08A]', cell: 'bg-[#EBD08A] text-[#5C4A16]' },
-  back_to_school: { label: 'Back to School', dot: 'bg-[#7FC4C0]', cell: 'bg-[#7FC4C0] text-[#0F3E3B]' },
-  other_event: { label: 'Other Events (Fairs, Concerts, Sports, etc.)', dot: 'bg-[#A9C0D8]', cell: 'bg-[#A9C0D8] text-[#2C4562]' },
+  official_holiday: { label: 'Official Holidays', dot: 'bg-[#BE252F]', cell: 'bg-[#BE252F] text-white font-bold' },
+  high_demand_celebration: { label: 'High Demand Celebrations', dot: 'bg-[#FEA96D]', cell: 'bg-[#FEA96D] text-[#7A3E12]' },
+  school_break: { label: 'School Break', dot: 'bg-[#6B97B0]', cell: 'bg-[#6B97B0] text-white' },
+  back_to_school: { label: 'Back to School', dot: 'bg-[#6B97B0]', cell: 'bg-[#6B97B0] text-white' },
+  other_event: { label: 'Other Events (Concerts, sports, etc)', dot: 'bg-[#66AEA1]', cell: 'bg-[#66AEA1] text-white' },
 };
+
+// Legend only shows categories people can actually see on the grid.
+const VISIBLE_CATEGORIES: Category[] = ['official_holiday', 'high_demand_celebration', 'school_break', 'other_event'];
 
 export interface CalendarEvent {
   id: number;
@@ -95,8 +97,12 @@ export default function CalendarApp() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cityAccess, setCityAccess] = useState<CityAccess>('signed-out');
   const [showAuth, setShowAuth] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
+  const [showHolidays, setShowHolidays] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [editModeOn, setEditModeOn] = useState(false);
+  const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
+
+  const canEdit = cityAccess === 'admin' || cityAccess === 'approved';
 
   // Track auth session.
   useEffect(() => {
@@ -226,6 +232,16 @@ export default function CalendarApp() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ cluster: clusterSlug, city: citySlug }));
   }, [clusterSlug, citySlug]);
 
+  // Leave edit mode when switching to a city (or losing access) that isn't editable.
+  // Ignore the transient 'loading' state a data refresh causes while re-checking
+  // access -- otherwise saving an event would silently kick the user out of edit mode.
+  useEffect(() => {
+    if (cityAccess !== 'loading' && !canEdit) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset derived UI state when access changes
+      setEditModeOn(false);
+    }
+  }, [canEdit, cityAccess, citySlug]);
+
   const resolved = findCity(citySlug);
 
   useEffect(() => {
@@ -313,6 +329,7 @@ export default function CalendarApp() {
     }
 
     for (const ev of events) {
+      if (ev.category === 'back_to_school') continue; // implied by the day after school_break ends, not shown
       const start = new Date(ev.start_date + 'T00:00:00');
       const end = ev.end_date ? new Date(ev.end_date + 'T00:00:00') : start;
       const cursor = new Date(start);
@@ -331,15 +348,28 @@ export default function CalendarApp() {
   async function requestCityAccess() {
     if (!supabase || !session) return;
     setCityAccess('loading');
-    await supabase.from('city_permissions').insert({ user_id: session.user.id, city_slug: citySlug });
+    // upsert (not insert) so a previously rejected request can be re-submitted
+    // in place -- (user_id, city_slug) is unique, a plain insert would conflict.
+    await supabase.from('city_permissions').upsert(
+      {
+        user_id: session.user.id,
+        city_slug: citySlug,
+        status: 'pending',
+        decided_at: null,
+        decided_by: null,
+        requested_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,city_slug' }
+    );
     refreshData();
   }
 
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
-    setShowEdit(false);
+    setShowHolidays(false);
     setShowAdmin(false);
+    setEditModeOn(false);
   }
 
   if (!resolved) return null;
@@ -348,12 +378,18 @@ export default function CalendarApp() {
     <>
     <div className="w-full min-h-screen bg-white text-neutral-900 flex flex-col">
     <div ref={headerRef} className="max-w-[1500px] mx-auto w-full px-8 lg:px-14 pt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
-          DiDi <span className="text-[#FD7C41]">Marketplace</span> Context Calendar
-        </h1>
+      <div className="flex items-start justify-between gap-6 mb-2">
+        <div>
+          <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
+            DiDi <span className="text-[#FD7C41]">Marketplace</span> Context Calendar
+          </h1>
+          <span className={`block text-[10px] text-neutral-400 mt-1.5 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
+            Cargando…
+          </span>
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-start gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#FD7C41] transition-colors"
             value={clusterSlug}
@@ -399,14 +435,9 @@ export default function CalendarApp() {
               ›
             </button>
           </div>
-
-          <span className={`text-[10px] text-neutral-400 transition-opacity w-16 ${loading ? 'opacity-100' : 'opacity-0'}`}>
-            Cargando…
-          </span>
         </div>
-      </div>
 
-      <div className="flex items-center justify-end gap-2 mb-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
         {profile?.is_admin && (
           <button
             onClick={() => setShowAdmin(true)}
@@ -416,14 +447,26 @@ export default function CalendarApp() {
           </button>
         )}
 
-        {cityAccess === 'admin' || cityAccess === 'approved' ? (
-          <button
-            onClick={() => setShowEdit(true)}
-            className="px-2.5 py-1 rounded-md bg-[#FD7C41] text-white font-medium hover:bg-[#e86d34] transition-colors"
-          >
-            Editar {resolved!.city.name}
-          </button>
-        ) : cityAccess === 'pending' ? (
+        {canEdit && (
+          <>
+            <button
+              onClick={() => setShowHolidays(true)}
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
+            >
+              Festivos
+            </button>
+            <button
+              onClick={() => setEditModeOn((v) => !v)}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                editModeOn ? 'bg-[#FD7C41] text-white hover:bg-[#e86d34]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41]'
+              }`}
+            >
+              {editModeOn ? `Editando ${resolved!.city.name} — clic en un día` : `Editar ${resolved!.city.name}`}
+            </button>
+          </>
+        )}
+
+        {cityAccess === 'pending' ? (
           <span className="px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-400">Solicitud pendiente</span>
         ) : cityAccess === 'none' ? (
           <button
@@ -432,6 +475,16 @@ export default function CalendarApp() {
           >
             Solicitar acceso a {resolved!.city.name}
           </button>
+        ) : cityAccess === 'rejected' ? (
+          <span className="flex items-center gap-1.5">
+            <span className="text-neutral-400">Tu solicitud para {resolved!.city.name} fue rechazada</span>
+            <button
+              onClick={requestCityAccess}
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
+            >
+              Volver a solicitar
+            </button>
+          </span>
         ) : null}
 
         {session ? (
@@ -442,10 +495,15 @@ export default function CalendarApp() {
             </button>
           </span>
         ) : (
-          <button onClick={() => setShowAuth(true)} className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors">
-            Iniciar sesión
-          </button>
+          <>
+            <span className="text-neutral-400">¿Quieres modificar este calendario?</span>
+            <button onClick={() => setShowAuth(true)} className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors">
+              Inicia sesión y pide permisos
+            </button>
+          </>
         )}
+        </div>
+        </div>
       </div>
     </div>
 
@@ -456,14 +514,24 @@ export default function CalendarApp() {
         style={{ gridTemplateColumns: `repeat(${cols}, ${cardSize ?? 100}px)` }}
       >
         {MONTH_NAMES.map((mn, m) => (
-          <MonthGrid key={m} year={year} month={m} monthName={mn} dayMap={dayMap} onHover={setTooltip} size={cardSize ?? 100} />
+          <MonthGrid
+            key={m}
+            year={year}
+            month={m}
+            monthName={mn}
+            dayMap={dayMap}
+            onHover={setTooltip}
+            size={cardSize ?? 100}
+            editable={editModeOn}
+            onDayClick={setDayModalDate}
+          />
         ))}
       </div>
 
       <div ref={legendRef} className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3 px-4 py-2 border border-neutral-200 rounded-md bg-neutral-50/60 text-[11px] text-neutral-500">
         <span>💰 Paycheck</span>
         <span>🎁 Bono</span>
-        {(Object.keys(CATEGORY_META) as Category[]).map((cat) => (
+        {VISIBLE_CATEGORIES.map((cat) => (
           <span key={cat} className="flex items-center gap-1.5">
             <i className={`inline-block w-2.5 h-2.5 rounded-sm ${CATEGORY_META[cat].dot}`} />
             {CATEGORY_META[cat].label}
@@ -492,14 +560,24 @@ export default function CalendarApp() {
 
     {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
-    {showEdit && resolved && (
-      <EditPanel
+    {showHolidays && resolved && (
+      <HolidaysPanel
         citySlug={citySlug}
         cityName={resolved.city.name}
         year={year}
-        events={events}
         holidays={holidays}
-        onClose={() => setShowEdit(false)}
+        onClose={() => setShowHolidays(false)}
+        onChanged={refreshData}
+      />
+    )}
+
+    {dayModalDate && resolved && (
+      <DayEventModal
+        citySlug={citySlug}
+        cityName={resolved.city.name}
+        date={dayModalDate}
+        events={events}
+        onClose={() => setDayModalDate(null)}
         onChanged={refreshData}
       />
     )}
@@ -516,6 +594,8 @@ function MonthGrid({
   dayMap,
   onHover,
   size,
+  editable,
+  onDayClick,
 }: {
   year: number;
   month: number;
@@ -523,6 +603,8 @@ function MonthGrid({
   dayMap: Map<string, DayInfo>;
   onHover: (t: { x: number; y: number; text: string } | null) => void;
   size: number;
+  editable: boolean;
+  onDayClick: (date: Date) => void;
 }) {
   const firstDow = new Date(year, month, 1).getDay();
   const offset = firstDow === 0 ? 6 : firstDow - 1;
@@ -553,13 +635,11 @@ function MonthGrid({
       className="bg-neutral-50 border border-neutral-100 rounded-lg flex flex-col overflow-hidden"
       style={{ width: size, height: size, padding: pad }}
     >
-      <div className="flex justify-center shrink-0" style={{ marginBottom: pad / 2 }}>
-        <span
-          className="font-semibold text-white bg-[#FD7C41] rounded-md tracking-wide"
-          style={{ fontSize: badgeFont, padding: `${pad / 3}px ${pad}px` }}
-        >
-          {monthName}
-        </span>
+      <div
+        className="text-center font-semibold text-white bg-[#FD7C41] tracking-wide shrink-0"
+        style={{ fontSize: badgeFont, padding: `${pad / 3}px ${pad}px`, margin: `-${pad}px -${pad}px ${pad / 2}px -${pad}px` }}
+      >
+        {monthName}
       </div>
       <div className="grid grid-cols-7 shrink-0" style={{ marginBottom: pad / 3 }}>
         {DAY_HEADERS.map((h, i) => (
@@ -581,7 +661,8 @@ function MonthGrid({
               const isSun = dt.getDay() === 0;
               const primaryCategory = info?.categories[0]?.category;
               const cellClasses = [
-                'flex flex-col items-center justify-center rounded-sm overflow-hidden leading-tight cursor-default h-full',
+                'flex flex-col items-center justify-center rounded-sm overflow-hidden leading-tight h-full w-full',
+                editable ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#FD7C41] hover:-outline-offset-2' : 'cursor-default',
                 info?.holidayName ? CATEGORY_META.official_holiday.cell + ' rounded' : '',
                 !info?.holidayName && primaryCategory ? CATEGORY_META[primaryCategory].cell + ' rounded' : '',
                 !info?.holidayName && !primaryCategory && isSun ? 'text-[#FD7C41]/70' : '',
@@ -604,6 +685,7 @@ function MonthGrid({
                   className={cellClasses}
                   onMouseMove={(e) => onHover({ x: e.clientX, y: e.clientY, text: tipText })}
                   onMouseLeave={() => onHover(null)}
+                  onClick={editable ? () => onDayClick(dt) : undefined}
                 >
                   <span style={{ fontSize: dayFont }}>{dt.getDate()}</span>
                   {emojis && (

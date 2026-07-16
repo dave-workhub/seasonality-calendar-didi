@@ -414,3 +414,11 @@ create policy "editors write holiday_overrides" on holiday_overrides
 drop policy if exists "editors write calendar_events" on calendar_events;
 create policy "editors write calendar_events" on calendar_events
   for all using (can_edit_city(city_slug)) with check (can_edit_city(city_slug));
+
+-- A rejected request can be re-submitted (flip status back to pending) by
+-- the same user; the client does this via an upsert instead of a new insert
+-- since (user_id, city_slug) is unique.
+drop policy if exists "user re-requests after rejection" on city_permissions;
+create policy "user re-requests after rejection" on city_permissions
+  for update using (auth.uid() = user_id and status = 'rejected')
+  with check (auth.uid() = user_id and status = 'pending');
