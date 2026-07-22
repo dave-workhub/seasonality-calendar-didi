@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { CLUSTERS } from '@/lib/cities';
+import { ALL_CITIES } from '@/lib/cities';
 
 interface Request {
   id: number;
@@ -13,9 +13,7 @@ interface Request {
   email?: string;
 }
 
-const CITY_NAME: Record<string, string> = Object.fromEntries(
-  CLUSTERS.flatMap((c) => c.cities.map((city) => [city.slug, city.name]))
-);
+const CITY_NAME: Record<string, string> = Object.fromEntries(ALL_CITIES.map((city) => [city.slug, city.name]));
 
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [requests, setRequests] = useState<Request[]>([]);

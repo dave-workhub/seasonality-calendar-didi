@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CLUSTERS, findCity } from '@/lib/cities';
+import { COUNTRIES, findCity } from '@/lib/cities';
 import { isoWeek, getPaycheckDates, getBonusDates, HolidayEntry } from '@/lib/holidays';
 import { supabase } from '@/lib/supabaseClient';
 import AuthModal from './AuthModal';
@@ -68,12 +68,12 @@ function dateKey(d: Date) {
   return `${d.getMonth()}-${d.getDate()}`;
 }
 
-function readPersistedSelection(): { cluster: string; city: string } | null {
+function readPersistedSelection(): { country: string; city: string } | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as { cluster: string; city: string };
+    const saved = JSON.parse(raw) as { country: string; city: string };
     return findCity(saved.city) ? saved : null;
   } catch {
     return null;
@@ -81,7 +81,7 @@ function readPersistedSelection(): { cluster: string; city: string } | null {
 }
 
 export default function CalendarApp() {
-  const [clusterSlug, setClusterSlug] = useState<string>(() => readPersistedSelection()?.cluster ?? 'casa');
+  const [countrySlug, setCountrySlug] = useState<string>(() => readPersistedSelection()?.country ?? 'CO');
   const [citySlug, setCitySlug] = useState<string>(() => readPersistedSelection()?.city ?? 'bogota');
   const [year, setYear] = useState<number>(2026);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -229,8 +229,8 @@ export default function CalendarApp() {
 
   // Persist selection so it's remembered on the next visit.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cluster: clusterSlug, city: citySlug }));
-  }, [clusterSlug, citySlug]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ country: countrySlug, city: citySlug }));
+  }, [countrySlug, citySlug]);
 
   // Leave edit mode when switching to a city (or losing access) that isn't editable.
   // Ignore the transient 'loading' state a data refresh causes while re-checking
@@ -381,7 +381,7 @@ export default function CalendarApp() {
       <div className="flex items-start justify-between gap-6 mb-2">
         <div>
           <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
-            DiDi <span className="text-[#FD7C41]">Marketplace</span> Context Calendar
+            <span className="text-[#FD7C41]">Marketplace</span> Context Calendar
           </h1>
           <span className={`block text-[10px] text-neutral-400 mt-1.5 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
             Cargando…
@@ -392,15 +392,15 @@ export default function CalendarApp() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#FD7C41] transition-colors"
-            value={clusterSlug}
+            value={countrySlug}
             onChange={(e) => {
-              const newCluster = CLUSTERS.find((c) => c.slug === e.target.value)!;
-              setClusterSlug(newCluster.slug);
-              setCitySlug(newCluster.cities[0].slug);
+              const newCountry = COUNTRIES.find((c) => c.code === e.target.value)!;
+              setCountrySlug(newCountry.code);
+              setCitySlug(newCountry.cities[0].slug);
             }}
           >
-            {CLUSTERS.map((c) => (
-              <option key={c.slug} value={c.slug}>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
                 {c.name}
               </option>
             ))}
@@ -411,7 +411,7 @@ export default function CalendarApp() {
             value={citySlug}
             onChange={(e) => setCitySlug(e.target.value)}
           >
-            {CLUSTERS.find((c) => c.slug === clusterSlug)!.cities.map((c) => (
+            {COUNTRIES.find((c) => c.code === countrySlug)!.cities.map((c) => (
               <option key={c.slug} value={c.slug}>
                 {c.name}
               </option>
