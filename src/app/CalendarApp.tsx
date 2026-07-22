@@ -381,7 +381,7 @@ export default function CalendarApp() {
       <div className="flex items-start justify-between gap-6 mb-2">
         <div>
           <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
-            <span className="text-[#FD7C41]">Marketplace</span> Context Calendar
+            <span className="text-[#FD7C41]">Context</span> Calendar
           </h1>
           <span className={`block text-[10px] text-neutral-400 mt-1.5 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
             Cargando…

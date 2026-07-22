@@ -20,7 +20,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Marketplace Context Calendar",
+  title: "Context Calendar",
   description: "Festivos, eventos y payroll por ciudad para CASA e Indigo",
 };
 
