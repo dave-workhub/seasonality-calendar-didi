@@ -15,7 +15,7 @@ const NAGER_SOURCE = 'https://date.nager.at';
 interface NagerHoliday {
   date: string; // YYYY-MM-DD
   localName: string;
-  name: string;
+  name: string; // English name — used instead of localName to keep the whole app in English
 }
 
 export const revalidate = 3600; // cache each country/year for 1 hour
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     const data: NagerHoliday[] = await res.json();
     holidays = data.map((h) => {
       const [, m, d] = h.date.split('-').map(Number);
-      return { month: m - 1, day: d, name: h.localName };
+      return { month: m - 1, day: d, name: h.name };
     });
     source = 'nager.date';
     live = true;

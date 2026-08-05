@@ -100,12 +100,12 @@ export default function HolidaysPanel({
         className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-neutral-900 mb-1">Festivos de {cityName}</h2>
-        <p className="text-xs text-neutral-400 mb-4">Año {year} — oculta un festivo que esté mal, renómbralo, o agrega uno local</p>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-1">Holidays for {cityName}</h2>
+        <p className="text-xs text-neutral-400 mb-4">Year {year} — hide a wrong holiday, rename it, or add a local one</p>
 
         {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
 
-        <p className="text-xs text-neutral-500 mb-2">Festivos oficiales visibles este año (fuente en vivo + excepciones aplicadas)</p>
+        <p className="text-xs text-neutral-500 mb-2">Official holidays visible this year (live source + exceptions applied)</p>
         <div className="flex flex-col gap-1.5 mb-5">
           {holidays.map((h) => {
             const key = `${h.month}-${h.day}`;
@@ -123,10 +123,10 @@ export default function HolidaysPanel({
                       className="flex-1 border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#FD7C41]"
                     />
                     <button onClick={() => rename(h.month, h.day)} className="text-xs text-[#FD7C41]">
-                      Guardar
+                      Save
                     </button>
                     <button onClick={() => setRenaming(null)} className="text-xs text-neutral-400">
-                      Cancelar
+                      Cancel
                     </button>
                   </>
                 ) : (
@@ -139,10 +139,10 @@ export default function HolidaysPanel({
                       }}
                       className="text-xs text-neutral-400 hover:text-[#FD7C41]"
                     >
-                      Renombrar
+                      Rename
                     </button>
                     <button onClick={() => hide(h.month, h.day)} className="text-xs text-neutral-400 hover:text-red-600">
-                      Ocultar
+                      Hide
                     </button>
                   </>
                 )}
@@ -151,7 +151,7 @@ export default function HolidaysPanel({
           })}
         </div>
 
-        <p className="text-xs text-neutral-500 mb-2">Agregar festivo local (no viene de la fuente oficial)</p>
+        <p className="text-xs text-neutral-500 mb-2">Add a local holiday (not from the official source)</p>
         <div className="flex gap-2 mb-5">
           <input
             type="date"
@@ -160,7 +160,7 @@ export default function HolidaysPanel({
             className="border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
           />
           <input
-            placeholder="Nombre"
+            placeholder="Name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             className="flex-1 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
@@ -170,20 +170,20 @@ export default function HolidaysPanel({
             disabled={!newDate || !newName.trim()}
             className="text-xs px-3 py-1.5 rounded-md bg-[#FD7C41] text-white font-medium disabled:opacity-50"
           >
-            Agregar
+            Add
           </button>
         </div>
 
         {overrides.length > 0 && (
           <>
-            <p className="text-xs text-neutral-500 mb-2">Excepciones activas para {year}</p>
+            <p className="text-xs text-neutral-500 mb-2">Active exceptions for {year}</p>
             <div className="flex flex-col gap-1.5">
               {overrides.map((o) => (
                 <div key={o.id} className="flex items-center gap-2 text-xs border border-neutral-100 rounded-md px-3 py-1.5 text-neutral-500">
                   <span className="w-20 shrink-0">{o.override_date}</span>
-                  <span className="flex-1">{o.hidden ? 'Oculto' : `Renombrado/agregado: ${o.custom_name}`}</span>
+                  <span className="flex-1">{o.hidden ? 'Hidden' : `Renamed/added: ${o.custom_name}`}</span>
                   <button onClick={() => removeOverride(o.id)} className="hover:text-red-600">
-                    Quitar excepción
+                    Remove exception
                   </button>
                 </div>
               ))}

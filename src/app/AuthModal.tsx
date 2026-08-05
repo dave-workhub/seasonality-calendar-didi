@@ -30,7 +30,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
         else setSignupDone(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Algo salió mal');
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
         {signupDone ? (
           <div className="text-center">
             <p className="text-sm text-neutral-700 mb-4">
-              Cuenta creada. Ya puedes iniciar sesión con tu correo y contraseña.
+              Account created. You can now sign in with your email and password.
             </p>
             <button
               onClick={() => {
@@ -54,19 +54,19 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
               }}
               className="px-4 py-1.5 rounded-md bg-[#FD7C41] text-white text-sm font-medium hover:bg-[#e86d34] transition-colors"
             >
-              Iniciar sesión
+              Sign in
             </button>
           </div>
         ) : (
           <>
             <h2 className="text-lg font-semibold text-neutral-900 mb-4">
-              {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+              {mode === 'login' ? 'Sign in' : 'Create account'}
             </h2>
             <form onSubmit={submit} className="flex flex-col gap-3">
               <input
                 type="email"
                 required
-                placeholder="Correo"
+                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD7C41]"
@@ -75,7 +75,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 type="password"
                 required
                 minLength={6}
-                placeholder="Contraseña"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD7C41]"
@@ -86,7 +86,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 disabled={loading}
                 className="px-4 py-2 rounded-md bg-[#FD7C41] text-white text-sm font-medium hover:bg-[#e86d34] transition-colors disabled:opacity-50"
               >
-                {loading ? 'Un momento…' : mode === 'login' ? 'Entrar' : 'Registrarme'}
+                {loading ? 'One moment…' : mode === 'login' ? 'Log in' : 'Sign up'}
               </button>
             </form>
             <button
@@ -96,7 +96,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
               }}
               className="text-xs text-neutral-500 hover:text-[#FD7C41] mt-3 underline"
             >
-              {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+              {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           </>
         )}

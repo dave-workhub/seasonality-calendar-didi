@@ -58,32 +58,32 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         className="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-neutral-900 mb-4">Solicitudes de acceso</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-4">Access requests</h2>
 
         {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
         {loading ? (
-          <p className="text-sm text-neutral-400">Cargando…</p>
+          <p className="text-sm text-neutral-400">Loading…</p>
         ) : (
           <>
-            <p className="text-xs text-neutral-500 mb-2">Pendientes ({pending.length})</p>
+            <p className="text-xs text-neutral-500 mb-2">Pending ({pending.length})</p>
             <div className="flex flex-col gap-1.5 mb-5">
-              {pending.length === 0 && <p className="text-sm text-neutral-400">No hay solicitudes pendientes.</p>}
+              {pending.length === 0 && <p className="text-sm text-neutral-400">No pending requests.</p>}
               {pending.map((r) => (
                 <div key={r.id} className="flex items-center gap-2 text-sm border border-neutral-100 rounded-md px-3 py-1.5">
                   <span className="flex-1 truncate">
                     {r.email} → <span className="font-medium">{CITY_NAME[r.city_slug] ?? r.city_slug}</span>
                   </span>
                   <button onClick={() => decide(r.id, 'approved')} className="text-xs px-2 py-1 rounded bg-[#FD7C41] text-white font-medium">
-                    Aprobar
+                    Approve
                   </button>
                   <button onClick={() => decide(r.id, 'rejected')} className="text-xs px-2 py-1 rounded border border-neutral-200 text-neutral-600">
-                    Rechazar
+                    Reject
                   </button>
                 </div>
               ))}
             </div>
 
-            <p className="text-xs text-neutral-500 mb-2">Historial ({decided.length})</p>
+            <p className="text-xs text-neutral-500 mb-2">History ({decided.length})</p>
             <div className="flex flex-col gap-1.5">
               {decided.map((r) => (
                 <div key={r.id} className="flex items-center gap-2 text-xs border border-neutral-100 rounded-md px-3 py-1.5 text-neutral-500">

@@ -19,7 +19,7 @@ function toISODate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-const DATE_LABEL_FMT = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'long', year: 'numeric' });
+const DATE_LABEL_FMT = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export default function DayEventModal({
   citySlug,
@@ -93,7 +93,7 @@ export default function DayEventModal({
 
   async function remove(id: number) {
     if (!supabase) return;
-    if (!confirm('¿Borrar este evento?')) return;
+    if (!confirm('Delete this event?')) return;
     setBusy(true);
     const { error: err } = await supabase.from('calendar_events').delete().eq('id', id);
     setBusy(false);
@@ -121,10 +121,10 @@ export default function DayEventModal({
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 shrink-0">{CATEGORY_LABEL[ev.category]}</span>
                 <span className="flex-1 truncate">{ev.title}</span>
                 <button onClick={() => startEdit(ev)} className="text-xs text-neutral-400 hover:text-[#FD7C41]">
-                  Editar
+                  Edit
                 </button>
                 <button onClick={() => remove(ev.id)} className="text-xs text-neutral-400 hover:text-red-600">
-                  Borrar
+                  Delete
                 </button>
               </div>
             ))}
@@ -132,7 +132,7 @@ export default function DayEventModal({
               onClick={startNew}
               className="text-xs px-3 py-1.5 rounded-md border border-dashed border-neutral-300 text-neutral-500 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors mt-1"
             >
-              + Agregar otro evento este día
+              + Add another event this day
             </button>
           </div>
         )}
@@ -142,7 +142,7 @@ export default function DayEventModal({
             <div className="grid grid-cols-2 gap-2 mb-2">
               <input
                 autoFocus
-                placeholder="Título"
+                placeholder="Title"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
@@ -159,7 +159,7 @@ export default function DayEventModal({
                 ))}
               </select>
               <label className="flex items-center gap-1.5 text-xs text-neutral-500">
-                Desde
+                From
                 <input
                   type="date"
                   value={form.start_date}
@@ -168,7 +168,7 @@ export default function DayEventModal({
                 />
               </label>
               <label className="flex items-center gap-1.5 text-xs text-neutral-500">
-                Hasta (opcional)
+                To (optional)
                 <input
                   type="date"
                   value={form.end_date}
@@ -177,7 +177,7 @@ export default function DayEventModal({
                 />
               </label>
               <input
-                placeholder="URL fuente (opcional)"
+                placeholder="Source URL (optional)"
                 value={form.source_url}
                 onChange={(e) => setForm({ ...form, source_url: e.target.value })}
                 className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
@@ -190,13 +190,13 @@ export default function DayEventModal({
                 onClick={save}
                 className="text-xs px-3 py-1.5 rounded-md bg-[#FD7C41] text-white font-medium disabled:opacity-50"
               >
-                Guardar
+                Save
               </button>
               <button
                 onClick={() => (touching.length > 0 ? setEditingId(null) : onClose())}
                 className="text-xs px-3 py-1.5 rounded-md border border-neutral-200 text-neutral-600"
               >
-                Cancelar
+                Cancel
               </button>
             </div>
           </div>

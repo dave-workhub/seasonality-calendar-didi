@@ -21,7 +21,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "Context Calendar",
-  description: "Festivos, eventos y payroll por ciudad para CASA e Indigo",
+  description: "Holidays, events, and payroll by city",
 };
 
 export default function RootLayout({
@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="es"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${jakarta.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

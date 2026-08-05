@@ -77,43 +77,43 @@ function nthWeekday(y: number, m: number, weekday: number, n: number): Date {
  */
 const OFFICIAL_2026: Partial<Record<CountryCode, [number, number, string][]>> = {
   CO: [
-    [0, 1, 'Año Nuevo'], [0, 12, 'Reyes Magos'], [2, 23, 'San José'],
-    [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
-    [4, 18, 'Ascensión del Señor'], [5, 8, 'Corpus Christi'], [5, 15, 'Sagrado Corazón'],
-    [5, 29, 'San Pedro y San Pablo'], [6, 13, 'Virgen del Rosario de Chiquinquirá'],
-    [6, 20, 'Independencia Nacional'], [7, 7, 'Batalla de Boyacá'], [7, 17, 'Asunción de la Virgen'],
-    [9, 12, 'Día de la Raza'], [10, 2, 'Todos los Santos'], [10, 16, 'Independencia de Cartagena'],
-    [11, 8, 'Inmaculada Concepción'], [11, 25, 'Navidad'],
+    [0, 1, "New Year's Day"], [0, 12, 'Epiphany'], [2, 23, "St. Joseph's Day"],
+    [3, 2, 'Maundy Thursday'], [3, 3, 'Good Friday'], [4, 1, 'Labor Day'],
+    [4, 18, 'Ascension Day'], [5, 8, 'Corpus Christi'], [5, 15, 'Sacred Heart'],
+    [5, 29, 'St. Peter and St. Paul'], [6, 13, 'Our Lady of Chiquinquirá'],
+    [6, 20, 'Independence Day'], [7, 7, 'Battle of Boyacá'], [7, 17, 'Assumption of Mary'],
+    [9, 12, 'Columbus Day'], [10, 2, "All Saints' Day"], [10, 16, 'Independence of Cartagena'],
+    [11, 8, 'Immaculate Conception'], [11, 25, 'Christmas'],
   ],
   CL: [
-    [0, 1, 'Año Nuevo'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
-    [4, 21, 'Glorias Navales'], [5, 29, 'San Pedro y San Pablo'], [6, 16, 'Virgen del Carmen'],
-    [7, 15, 'Asunción de la Virgen'], [8, 18, 'Fiestas Patrias'], [8, 19, 'Glorias del Ejército'],
-    [9, 12, 'Encuentro de Dos Mundos'], [9, 31, 'Día de las Iglesias Evangélicas'],
-    [10, 1, 'Todos los Santos'], [11, 8, 'Inmaculada Concepción'], [11, 24, 'Nochebuena'],
-    [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+    [0, 1, "New Year's Day"], [3, 2, 'Maundy Thursday'], [3, 3, 'Good Friday'], [4, 1, 'Labor Day'],
+    [4, 21, 'Navy Day'], [5, 29, 'St. Peter and St. Paul'], [6, 16, 'Our Lady of Mount Carmel'],
+    [7, 15, 'Assumption of Mary'], [8, 18, 'Independence Day'], [8, 19, "Army Day"],
+    [9, 12, 'Meeting of Two Worlds'], [9, 31, 'Evangelical and Protestant Churches Day'],
+    [10, 1, "All Saints' Day"], [11, 8, 'Immaculate Conception'], [11, 24, 'Christmas Eve'],
+    [11, 25, 'Christmas'], [11, 31, "New Year's Eve"],
   ],
   PE: [
-    [0, 1, 'Año Nuevo'], [0, 6, 'Reyes Magos'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'],
-    [4, 1, 'Día del Trabajo'], [5, 8, 'Batalla de Arica'], [5, 29, 'San Pedro y San Pablo'],
-    [6, 23, 'Día de la Fuerza Aérea del Perú'], [6, 28, 'Fiestas Patrias – Día 1'],
-    [6, 29, 'Fiestas Patrias – Día 2'], [7, 6, 'Batalla de Junín'], [7, 30, 'Santa Rosa de Lima'],
-    [9, 8, 'Combate de Angamos'], [10, 2, 'Todos los Santos'], [11, 8, 'Inmaculada Concepción'],
-    [11, 9, 'Batalla de Ayacucho'], [11, 25, 'Navidad'],
+    [0, 1, "New Year's Day"], [0, 6, 'Epiphany'], [3, 2, 'Maundy Thursday'], [3, 3, 'Good Friday'],
+    [4, 1, 'Labor Day'], [5, 8, 'Battle of Arica'], [5, 29, 'St. Peter and St. Paul'],
+    [6, 23, 'Peruvian Air Force Day'], [6, 28, 'Independence Day 1'],
+    [6, 29, 'Independence Day 2'], [7, 6, 'Battle of Junín'], [7, 30, 'St. Rose of Lima'],
+    [9, 8, 'Battle of Angamos'], [10, 2, "All Saints' Day"], [11, 8, 'Immaculate Conception'],
+    [11, 9, 'Battle of Ayacucho'], [11, 25, 'Christmas'],
   ],
   MX: [
-    [0, 1, 'Año Nuevo'], [1, 2, 'Día de la Constitución'], [2, 16, 'Natalicio de Benito Juárez'],
-    [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [4, 1, 'Día del Trabajo'],
-    [8, 15, 'Independencia (puente)'], [8, 16, 'Día de la Independencia'],
-    [10, 2, 'Día de Muertos'], [10, 16, 'Día de la Revolución'],
-    [11, 24, 'Nochebuena'], [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+    [0, 1, "New Year's Day"], [1, 2, 'Constitution Day'], [2, 16, "Benito Juárez's Birthday"],
+    [3, 2, 'Maundy Thursday'], [3, 3, 'Good Friday'], [4, 1, 'Labor Day'],
+    [8, 15, 'Independence Day (eve)'], [8, 16, 'Independence Day'],
+    [10, 2, 'Day of the Dead'], [10, 16, 'Revolution Day'],
+    [11, 24, 'Christmas Eve'], [11, 25, 'Christmas'], [11, 31, "New Year's Eve"],
   ],
   CR: [
-    [0, 1, 'Año Nuevo'], [3, 2, 'Jueves Santo'], [3, 3, 'Viernes Santo'], [3, 13, 'Día de Juan Santamaría'],
-    [4, 1, 'Día del Trabajo'], [6, 27, 'Día de Guanacaste'],
-    [7, 31, 'Día de la Persona Negra y la Cultura Afrocostarricense'],
-    [8, 14, 'Independencia (víspera)'], [8, 15, 'Día de la Independencia'],
-    [11, 1, 'Abolición del Ejército'], [11, 24, 'Nochebuena'], [11, 25, 'Navidad'], [11, 31, 'Fin de Año'],
+    [0, 1, "New Year's Day"], [3, 2, 'Maundy Thursday'], [3, 3, 'Good Friday'], [3, 13, 'Juan Santamaría Day'],
+    [4, 1, 'Labor Day'], [6, 27, 'Guanacaste Day'],
+    [7, 31, 'Afro-Costa Rican Culture Day'],
+    [8, 14, 'Independence Day (eve)'], [8, 15, 'Independence Day'],
+    [11, 1, 'Army Abolition Day'], [11, 24, 'Christmas Eve'], [11, 25, 'Christmas'], [11, 31, "New Year's Eve"],
   ],
 };
 
@@ -131,109 +131,109 @@ export function getHolidays(country: CountryCode, y: number): HolidayEntry[] {
 
   switch (country) {
     case 'CO':
-      push(D(y, 0, 1), 'Año Nuevo');
-      push(nextMonday(D(y, 0, 6)), 'Reyes Magos');
-      push(nextMonday(D(y, 2, 19)), 'San José');
-      push(addDays(E, -3), 'Jueves Santo');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(nextMonday(addDays(E, 39)), 'Ascensión del Señor');
+      push(D(y, 0, 1), "New Year's Day");
+      push(nextMonday(D(y, 0, 6)), 'Epiphany');
+      push(nextMonday(D(y, 2, 19)), "St. Joseph's Day");
+      push(addDays(E, -3), 'Maundy Thursday');
+      push(addDays(E, -2), 'Good Friday');
+      push(D(y, 4, 1), 'Labor Day');
+      push(nextMonday(addDays(E, 39)), 'Ascension Day');
       push(nextMonday(addDays(E, 60)), 'Corpus Christi');
-      push(nextMonday(addDays(E, 68)), 'Sagrado Corazón');
-      push(nextMonday(D(y, 5, 29)), 'San Pedro y San Pablo');
-      push(D(y, 6, 20), 'Independencia Nacional');
-      push(D(y, 7, 7), 'Batalla de Boyacá');
-      push(nextMonday(D(y, 7, 15)), 'Asunción de la Virgen');
-      push(nextMonday(D(y, 9, 12)), 'Día de la Raza');
-      push(nextMonday(D(y, 10, 1)), 'Todos los Santos');
-      push(nextMonday(D(y, 10, 11)), 'Independencia de Cartagena');
-      push(D(y, 11, 8), 'Inmaculada Concepción');
-      push(D(y, 11, 25), 'Navidad');
+      push(nextMonday(addDays(E, 68)), 'Sacred Heart');
+      push(nextMonday(D(y, 5, 29)), 'St. Peter and St. Paul');
+      push(D(y, 6, 20), 'Independence Day');
+      push(D(y, 7, 7), 'Battle of Boyacá');
+      push(nextMonday(D(y, 7, 15)), 'Assumption of Mary');
+      push(nextMonday(D(y, 9, 12)), 'Columbus Day');
+      push(nextMonday(D(y, 10, 1)), "All Saints' Day");
+      push(nextMonday(D(y, 10, 11)), 'Independence of Cartagena');
+      push(D(y, 11, 8), 'Immaculate Conception');
+      push(D(y, 11, 25), 'Christmas');
       break;
 
     case 'CL': {
-      push(D(y, 0, 1), 'Año Nuevo');
-      if (D(y, 0, 1).getDay() === 6) push(D(y, 0, 2), 'Feriado adicional Año Nuevo');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(addDays(E, -1), 'Sábado Santo');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 4, 21), 'Glorias Navales');
+      push(D(y, 0, 1), "New Year's Day");
+      if (D(y, 0, 1).getDay() === 6) push(D(y, 0, 2), "New Year's Day (observed)");
+      push(addDays(E, -2), 'Good Friday');
+      push(addDays(E, -1), 'Holy Saturday');
+      push(D(y, 4, 1), 'Labor Day');
+      push(D(y, 4, 21), 'Navy Day');
       const j21 = D(y, 5, 21);
       const jw = j21.getDay();
-      push(jw === 0 ? D(y, 5, 22) : jw === 1 ? j21 : addDays(j21, 1 - jw), 'Día Nacional de los Pueblos Indígenas');
-      push(nearestMonday(D(y, 5, 29)), 'San Pedro y San Pablo');
-      push(D(y, 6, 16), 'Virgen del Carmen');
-      push(D(y, 7, 15), 'Asunción de la Virgen');
-      push(D(y, 8, 18), 'Día de la Independencia');
-      push(D(y, 8, 19), 'Glorias del Ejército');
-      push(nearestMonday(D(y, 9, 12)), 'Encuentro de Dos Mundos');
-      push(D(y, 9, 31), 'Iglesias Evangélicas');
-      push(D(y, 10, 1), 'Todos los Santos');
-      push(D(y, 11, 8), 'Inmaculada Concepción');
-      push(D(y, 11, 25), 'Navidad');
+      push(jw === 0 ? D(y, 5, 22) : jw === 1 ? j21 : addDays(j21, 1 - jw), 'National Day of Indigenous Peoples');
+      push(nearestMonday(D(y, 5, 29)), 'St. Peter and St. Paul');
+      push(D(y, 6, 16), 'Our Lady of Mount Carmel');
+      push(D(y, 7, 15), 'Assumption of Mary');
+      push(D(y, 8, 18), 'Independence Day');
+      push(D(y, 8, 19), 'Army Day');
+      push(nearestMonday(D(y, 9, 12)), 'Meeting of Two Worlds');
+      push(D(y, 9, 31), 'Evangelical and Protestant Churches Day');
+      push(D(y, 10, 1), "All Saints' Day");
+      push(D(y, 11, 8), 'Immaculate Conception');
+      push(D(y, 11, 25), 'Christmas');
       break;
     }
 
     case 'PE':
-      push(D(y, 0, 1), 'Año Nuevo');
-      push(addDays(E, -3), 'Jueves Santo');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 5, 7), 'Batalla de Arica');
-      push(D(y, 5, 24), 'Día del Campesino');
-      push(D(y, 5, 29), 'San Pedro y San Pablo');
-      push(D(y, 6, 23), 'Día de la Fuerza Aérea');
-      push(D(y, 6, 28), 'Fiestas Patrias – Día 1');
-      push(D(y, 6, 29), 'Fiestas Patrias – Día 2');
-      push(D(y, 7, 6), 'Batalla de Junín');
-      push(D(y, 7, 30), 'Santa Rosa de Lima');
-      push(D(y, 9, 8), 'Combate de Angamos');
-      push(D(y, 10, 1), 'Todos los Santos');
-      push(D(y, 11, 8), 'Inmaculada Concepción');
-      push(D(y, 11, 9), 'Batalla de Ayacucho');
-      push(D(y, 11, 25), 'Navidad');
+      push(D(y, 0, 1), "New Year's Day");
+      push(addDays(E, -3), 'Maundy Thursday');
+      push(addDays(E, -2), 'Good Friday');
+      push(D(y, 4, 1), 'Labor Day');
+      push(D(y, 5, 7), 'Battle of Arica');
+      push(D(y, 5, 24), 'Farmer\'s Day');
+      push(D(y, 5, 29), 'St. Peter and St. Paul');
+      push(D(y, 6, 23), 'Peruvian Air Force Day');
+      push(D(y, 6, 28), 'Independence Day 1');
+      push(D(y, 6, 29), 'Independence Day 2');
+      push(D(y, 7, 6), 'Battle of Junín');
+      push(D(y, 7, 30), 'St. Rose of Lima');
+      push(D(y, 9, 8), 'Battle of Angamos');
+      push(D(y, 10, 1), "All Saints' Day");
+      push(D(y, 11, 8), 'Immaculate Conception');
+      push(D(y, 11, 9), 'Battle of Ayacucho');
+      push(D(y, 11, 25), 'Christmas');
       break;
 
     case 'MX':
-      push(D(y, 0, 1), 'Año Nuevo');
-      push(nthWeekday(y, 1, 1, 1), 'Día de la Constitución');
-      push(nthWeekday(y, 2, 1, 3), 'Natalicio de Benito Juárez');
-      push(addDays(E, -3), 'Jueves Santo');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 8, 15), 'Independencia (víspera)');
-      push(D(y, 8, 16), 'Día de la Independencia');
-      push(nthWeekday(y, 10, 1, 3), 'Día de la Revolución');
-      push(D(y, 11, 24), 'Nochebuena');
-      push(D(y, 11, 25), 'Navidad');
-      push(D(y, 11, 31), 'Fin de Año');
+      push(D(y, 0, 1), "New Year's Day");
+      push(nthWeekday(y, 1, 1, 1), 'Constitution Day');
+      push(nthWeekday(y, 2, 1, 3), "Benito Juárez's Birthday");
+      push(addDays(E, -3), 'Maundy Thursday');
+      push(addDays(E, -2), 'Good Friday');
+      push(D(y, 4, 1), 'Labor Day');
+      push(D(y, 8, 15), 'Independence Day (eve)');
+      push(D(y, 8, 16), 'Independence Day');
+      push(nthWeekday(y, 10, 1, 3), 'Revolution Day');
+      push(D(y, 11, 24), 'Christmas Eve');
+      push(D(y, 11, 25), 'Christmas');
+      push(D(y, 11, 31), "New Year's Eve");
       break;
 
     case 'CR':
-      push(D(y, 0, 1), 'Año Nuevo');
-      push(addDays(E, -3), 'Jueves Santo');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(D(y, 3, 11), 'Día de Juan Santamaría');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 6, 25), 'Anexión del Partido de Nicoya');
-      push(D(y, 7, 2), 'Virgen de los Ángeles');
-      push(D(y, 7, 15), 'Día de la Madre');
-      push(D(y, 8, 15), 'Día de la Independencia');
-      push(D(y, 11, 25), 'Navidad');
+      push(D(y, 0, 1), "New Year's Day");
+      push(addDays(E, -3), 'Maundy Thursday');
+      push(addDays(E, -2), 'Good Friday');
+      push(D(y, 3, 11), 'Juan Santamaría Day');
+      push(D(y, 4, 1), 'Labor Day');
+      push(D(y, 6, 25), 'Annexation of Nicoya');
+      push(D(y, 7, 2), 'Our Lady of the Angels');
+      push(D(y, 7, 15), "Mother's Day");
+      push(D(y, 8, 15), 'Independence Day');
+      push(D(y, 11, 25), 'Christmas');
       break;
 
     case 'EC': {
-      push(D(y, 0, 1), 'Año Nuevo');
-      push(addDays(E, -48), 'Carnaval (Lunes)');
-      push(addDays(E, -47), 'Carnaval (Martes)');
-      push(addDays(E, -2), 'Viernes Santo');
-      push(D(y, 4, 1), 'Día del Trabajo');
-      push(D(y, 4, 24), 'Batalla de Pichincha');
-      push(D(y, 7, 10), 'Primer Grito de Independencia de Quito');
-      push(D(y, 9, 9), 'Independencia de Guayaquil');
-      push(D(y, 10, 2), 'Día de los Difuntos');
-      push(D(y, 10, 3), 'Independencia de Cuenca');
-      push(D(y, 11, 25), 'Navidad');
+      push(D(y, 0, 1), "New Year's Day");
+      push(addDays(E, -48), 'Carnival (Monday)');
+      push(addDays(E, -47), 'Carnival (Tuesday)');
+      push(addDays(E, -2), 'Good Friday');
+      push(D(y, 4, 1), 'Labor Day');
+      push(D(y, 4, 24), 'Battle of Pichincha');
+      push(D(y, 7, 10), "Quito's First Cry of Independence");
+      push(D(y, 9, 9), 'Independence of Guayaquil');
+      push(D(y, 10, 2), "All Souls' Day");
+      push(D(y, 10, 3), 'Independence of Cuenca');
+      push(D(y, 11, 25), 'Christmas');
       break;
     }
   }
@@ -284,22 +284,22 @@ export function getBonusDates(country: CountryCode, y: number, holidaySet: Set<s
 
   const defs: Record<CountryCode, [Date, string][]> = {
     CO: [
-      [D(y, 5, 30), 'Prima de servicios'],
-      [D(y, 11, 20), 'Prima de servicios'],
+      [D(y, 5, 30), 'Service Bonus'],
+      [D(y, 11, 20), 'Service Bonus'],
     ],
     PE: [
-      [D(y, 6, 15), 'Gratificación'],
-      [D(y, 11, 15), 'Gratificación'],
+      [D(y, 6, 15), 'Bonus'],
+      [D(y, 11, 15), 'Bonus'],
     ],
     CL: [
-      [D(y, 8, 15), 'Gratificación'],
-      [D(y, 11, 15), 'Gratificación'],
+      [D(y, 8, 15), 'Bonus'],
+      [D(y, 11, 15), 'Bonus'],
     ],
-    MX: [[D(y, 11, 20), 'Aguinaldo']],
-    CR: [[D(y, 11, 1), 'Aguinaldo']],
+    MX: [[D(y, 11, 20), 'Christmas Bonus']],
+    CR: [[D(y, 11, 1), 'Christmas Bonus']],
     EC: [
-      [D(y, 2, 15), 'Décimo Cuarto Sueldo'],
-      [D(y, 11, 24), 'Décimo Tercer Sueldo'],
+      [D(y, 2, 15), '14th Salary'],
+      [D(y, 11, 24), '13th Salary'],
     ],
   };
 

@@ -19,10 +19,10 @@ export interface Profile {
 export type CityAccess = 'loading' | 'signed-out' | 'none' | 'pending' | 'approved' | 'rejected' | 'admin';
 
 const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
-const DAY_HEADERS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 const STORAGE_KEY = 'seasonality-calendar-selection';
 
@@ -427,7 +427,7 @@ export default function CalendarApp() {
             <span className="text-[#FD7C41]">Context</span> Calendar
           </h1>
           <span className={`block text-[10px] text-neutral-400 mt-1.5 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
-            Cargando…
+            Loading…
           </span>
         </div>
 
@@ -463,7 +463,7 @@ export default function CalendarApp() {
 
           <div className="flex items-center gap-1.5 border border-neutral-200 rounded-md px-1.5 py-1">
             <button
-              aria-label="Año anterior"
+              aria-label="Previous year"
               className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#FD7C41] transition-colors"
               onClick={() => setYear((y) => y - 1)}
             >
@@ -471,7 +471,7 @@ export default function CalendarApp() {
             </button>
             <span className="text-sm font-bold text-neutral-900 tabular-nums w-10 text-center">{year}</span>
             <button
-              aria-label="Año siguiente"
+              aria-label="Next year"
               className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#FD7C41] transition-colors"
               onClick={() => setYear((y) => y + 1)}
             >
@@ -496,7 +496,7 @@ export default function CalendarApp() {
               onClick={() => setShowHolidays(true)}
               className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
             >
-              Festivos
+              Holidays
             </button>
             <button
               onClick={() => setEditModeOn((v) => !v)}
@@ -504,28 +504,28 @@ export default function CalendarApp() {
                 editModeOn ? 'bg-[#FD7C41] text-white hover:bg-[#e86d34]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41]'
               }`}
             >
-              {editModeOn ? `Editando ${resolved!.city.name} — clic en un día` : `Editar ${resolved!.city.name}`}
+              {editModeOn ? `Editing ${resolved!.city.name} — click a day` : `Edit ${resolved!.city.name}`}
             </button>
           </>
         )}
 
         {cityAccess === 'pending' ? (
-          <span className="px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-400">Solicitud pendiente</span>
+          <span className="px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-400">Request pending</span>
         ) : cityAccess === 'none' ? (
           <button
             onClick={requestCityAccess}
             className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
           >
-            Solicitar acceso a {resolved!.city.name}
+            Request access to {resolved!.city.name}
           </button>
         ) : cityAccess === 'rejected' ? (
           <span className="flex items-center gap-1.5">
-            <span className="text-neutral-400">Tu solicitud para {resolved!.city.name} fue rechazada</span>
+            <span className="text-neutral-400">Your request for {resolved!.city.name} was rejected</span>
             <button
               onClick={requestCityAccess}
               className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors"
             >
-              Volver a solicitar
+              Request again
             </button>
           </span>
         ) : null}
@@ -534,14 +534,14 @@ export default function CalendarApp() {
           <span className="flex items-center gap-1.5 text-neutral-400">
             {session.user.email}
             <button onClick={signOut} className="underline hover:text-[#FD7C41]">
-              Salir
+              Sign out
             </button>
           </span>
         ) : (
           <>
-            <span className="text-neutral-400">¿Quieres modificar este calendario?</span>
+            <span className="text-neutral-400">Want to edit this calendar?</span>
             <button onClick={() => setShowAuth(true)} className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD7C41] hover:text-[#FD7C41] transition-colors">
-              Inicia sesión y pide permisos
+              Sign in and request access
             </button>
           </>
         )}
@@ -573,8 +573,10 @@ export default function CalendarApp() {
 
       <div ref={legendRef} className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3 px-4 py-2 border border-neutral-200 rounded-md bg-neutral-50/60 text-[11px] text-neutral-500">
         <span>💰 Paycheck</span>
-        <span>🎁 Bono</span>
-        <span>💧 Lluvia (pronóstico o real)</span>
+        <span>🎁 Bonus</span>
+        <span title={`Shown when ${RAIN_THRESHOLD_MM}mm+ of rain is forecast or actually fell that day — light rain/drizzle below that isn't flagged.`}>
+          💧 Rain (≥{RAIN_THRESHOLD_MM}mm forecast or actual)
+        </span>
         {VISIBLE_CATEGORIES.map((cat) => (
           <span key={cat} className="flex items-center gap-1.5">
             <i className={`inline-block w-2.5 h-2.5 rounded-sm ${CATEGORY_META[cat].dot}`} />
@@ -585,7 +587,7 @@ export default function CalendarApp() {
 
       {holidaySource === 'algorithmic-fallback' && (
         <div className="text-center text-[11px] text-neutral-400 mt-2">
-          ⚠ Festivos no disponibles en este momento — mostrando estimación local
+          ⚠ Holidays unavailable right now — showing a local estimate instead
         </div>
       )}
 

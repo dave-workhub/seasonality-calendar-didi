@@ -17,8 +17,8 @@ export interface CountryGroup {
 const COUNTRY_NAMES: Record<CountryCode, string> = {
   CO: 'Colombia',
   CL: 'Chile',
-  PE: 'Perú',
-  MX: 'México',
+  PE: 'Peru',
+  MX: 'Mexico',
   CR: 'Costa Rica',
   EC: 'Ecuador',
 };
