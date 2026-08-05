@@ -101,7 +101,7 @@ function readPersistedSelection(): { country: string; city: string } | null {
 
 export default function CalendarApp() {
   const [countrySlug, setCountrySlug] = useState<string>(() => readPersistedSelection()?.country ?? 'CO');
-  const [citySlug, setCitySlug] = useState<string>(() => readPersistedSelection()?.city ?? 'bogota');
+  const [citySlug, setCitySlug] = useState<string>(() => readPersistedSelection()?.city ?? 'cartagena');
   const [year, setYear] = useState<number>(2026);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [holidays, setHolidays] = useState<HolidayEntry[]>([]);
