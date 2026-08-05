@@ -72,13 +72,15 @@ export interface RainDay {
   actual_precip_mm: number | null;
 }
 
-// A day "counts" as rainy for the 💧 badge if it actually rained a
-// measurable amount, or — for days without an actual yet — the forecast
-// gives a decent chance of it.
+// A day "counts" as rainy for the 💧 badge only at "moderate rain" or above
+// (WMO daily-total convention: light rain/drizzle is well under 5mm and is
+// deliberately excluded here so the badge means something). Actuals take
+// priority once known; forecasts use the same mm threshold until then.
+const RAIN_THRESHOLD_MM = 5;
+
 function isRainyDay(r: RainDay): boolean {
-  if (r.actual_precip_mm !== null) return r.actual_precip_mm >= 1;
-  if (r.forecast_pop !== null) return r.forecast_pop >= 50;
-  return (r.forecast_precip_mm ?? 0) >= 1;
+  if (r.actual_precip_mm !== null) return r.actual_precip_mm >= RAIN_THRESHOLD_MM;
+  return (r.forecast_precip_mm ?? 0) >= RAIN_THRESHOLD_MM;
 }
 
 function dateKey(d: Date) {
