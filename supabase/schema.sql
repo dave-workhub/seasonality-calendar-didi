@@ -25,6 +25,11 @@ create table if not exists calendar_events (
 create index if not exists calendar_events_city_idx on calendar_events (city_slug, start_date);
 create index if not exists calendar_events_source_idx on calendar_events (source);
 
+-- Prevents a re-run of a seed/insert script from silently duplicating rows
+-- (paired with "on conflict do nothing" on inserts).
+create unique index if not exists calendar_events_no_dupes
+  on calendar_events (city_slug, start_date, title);
+
 -- Read-only public access (this is non-sensitive scheduling data).
 alter table calendar_events enable row level security;
 drop policy if exists "public read calendar_events" on calendar_events;
