@@ -422,3 +422,27 @@ drop policy if exists "user re-requests after rejection" on city_permissions;
 create policy "user re-requests after rejection" on city_permissions
   for update using (auth.uid() = user_id and status = 'rejected')
   with check (auth.uid() = user_id and status = 'pending');
+
+-- ══════════════════════════════════════════════════════════════════
+-- Rain — Open-Meteo forecast synced daily by /api/cron/sync-weather,
+-- graded against actuals the following day.
+-- ══════════════════════════════════════════════════════════════════
+
+create table if not exists rain_daily (
+  id bigint generated always as identity primary key,
+  city_slug text not null,
+  date date not null,
+  forecast_precip_mm numeric,
+  forecast_pop numeric, -- probability of precipitation, 0-100
+  actual_precip_mm numeric,
+  updated_at timestamptz not null default now(),
+  unique (city_slug, date)
+);
+
+alter table rain_daily enable row level security;
+
+drop policy if exists "public read rain_daily" on rain_daily;
+create policy "public read rain_daily" on rain_daily for select using (true);
+
+-- No public write policy: only the cron job (via the service_role key, which
+-- bypasses RLS) writes to this table.

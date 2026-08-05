@@ -62,6 +62,23 @@ interface DayInfo {
   categories: { category: Category; title: string }[];
   isPaycheck: boolean;
   bonusName: string | null;
+  rain: RainDay | null;
+}
+
+export interface RainDay {
+  date: string;
+  forecast_precip_mm: number | null;
+  forecast_pop: number | null;
+  actual_precip_mm: number | null;
+}
+
+// A day "counts" as rainy for the 💧 badge if it actually rained a
+// measurable amount, or — for days without an actual yet — the forecast
+// gives a decent chance of it.
+function isRainyDay(r: RainDay): boolean {
+  if (r.actual_precip_mm !== null) return r.actual_precip_mm >= 1;
+  if (r.forecast_pop !== null) return r.forecast_pop >= 50;
+  return (r.forecast_precip_mm ?? 0) >= 1;
 }
 
 function dateKey(d: Date) {
@@ -87,6 +104,7 @@ export default function CalendarApp() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [holidays, setHolidays] = useState<HolidayEntry[]>([]);
   const [holidaySource, setHolidaySource] = useState<'nager.date' | 'algorithmic-fallback' | null>(null);
+  const [rainDays, setRainDays] = useState<RainDay[]>([]);
   const [loading, setLoading] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -287,6 +305,22 @@ export default function CalendarApp() {
     };
   }, [citySlug, year, dataVersion]);
 
+  useEffect(() => {
+    if (!findCity(citySlug)) return;
+    let cancelled = false;
+    fetch(`/api/rain?city=${citySlug}&year=${year}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setRainDays(data.days ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRainDays([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [citySlug, year, dataVersion]);
+
   const dayMap = useMemo(() => {
     if (!resolved) return new Map<string, DayInfo>();
     const { city } = resolved;
@@ -311,6 +345,7 @@ export default function CalendarApp() {
           categories: [],
           isPaycheck: paycheckSet.has(k),
           bonusName: bonusMap.get(k) ?? null,
+          rain: null,
         };
         map.set(k, info);
       }
@@ -342,8 +377,14 @@ export default function CalendarApp() {
       }
     }
 
+    for (const r of rainDays) {
+      const [, m, d] = r.date.split('-').map(Number);
+      const info = ensure(new Date(year, m - 1, d));
+      info.rain = r;
+    }
+
     return map;
-  }, [resolved, year, events, holidays]);
+  }, [resolved, year, events, holidays, rainDays]);
 
   async function requestCityAccess() {
     if (!supabase || !session) return;
@@ -531,6 +572,7 @@ export default function CalendarApp() {
       <div ref={legendRef} className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3 px-4 py-2 border border-neutral-200 rounded-md bg-neutral-50/60 text-[11px] text-neutral-500">
         <span>💰 Paycheck</span>
         <span>🎁 Bono</span>
+        <span>💧 Lluvia (pronóstico o real)</span>
         {VISIBLE_CATEGORIES.map((cat) => (
           <span key={cat} className="flex items-center gap-1.5">
             <i className={`inline-block w-2.5 h-2.5 rounded-sm ${CATEGORY_META[cat].dot}`} />
@@ -670,14 +712,26 @@ function MonthGrid({
                 info?.isToday ? 'outline outline-2 outline-neutral-900 -outline-offset-2 rounded' : '',
               ].join(' ');
 
+              const rainy = info?.rain && isRainyDay(info.rain);
+
               const tipParts = [`W${isoWeek(dt)}`];
               if (info?.holidayName) tipParts.push(info.holidayName);
               if (info?.isPaycheck) tipParts.push('💰 Paycheck');
               if (info?.bonusName) tipParts.push('🎁 ' + info.bonusName);
               for (const c of info?.categories ?? []) tipParts.push(c.title);
+              if (info?.rain) {
+                const r = info.rain;
+                if (r.actual_precip_mm !== null) {
+                  tipParts.push(`🌧 ${r.actual_precip_mm.toFixed(1)}mm (actual)`);
+                } else if (r.forecast_pop !== null || r.forecast_precip_mm !== null) {
+                  const pop = r.forecast_pop !== null ? `${Math.round(r.forecast_pop)}%` : '';
+                  const mm = r.forecast_precip_mm !== null ? `${r.forecast_precip_mm.toFixed(1)}mm` : '';
+                  tipParts.push(`🌧 ${[pop, mm].filter(Boolean).join(' · ')} (forecast)`);
+                }
+              }
               const tipText = tipParts.join(' · ');
 
-              const emojis = (info?.isPaycheck ? '💰' : '') + (info?.bonusName ? '🎁' : '');
+              const emojis = (info?.isPaycheck ? '💰' : '') + (info?.bonusName ? '🎁' : '') + (rainy ? '💧' : '');
 
               return (
                 <div
