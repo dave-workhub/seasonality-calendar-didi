@@ -27,6 +27,10 @@ const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 const STORAGE_KEY = 'seasonality-calendar-selection';
 
+// Burn sidebar width (w-[210px]) + the row's gap-4 — reserved off the grid's
+// available width in the card-sizing calculation below.
+const BURN_SIDEBAR_RESERVED = 210 + 16;
+
 export type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
 
 // back_to_school is intentionally excluded: it's implied by the day right
@@ -201,10 +205,13 @@ export default function CalendarApp() {
   }, [session, profile, citySlug, dataVersion]);
 
   const headerRef = useRef<HTMLDivElement>(null);
+  const contentAreaRef = useRef<HTMLDivElement>(null); // the max-w container, NOT the grid itself
   const gridWrapRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(6);
   const [cardSize, setCardSize] = useState<number | null>(null);
+
+  const burnSidebarOpen = showBurn && !!profile?.is_admin;
 
   // Size each month card so the whole grid — square cards included — always
   // fits the viewport without scrolling, at any window size.
@@ -216,7 +223,13 @@ export default function CalendarApp() {
       const c = width < 640 ? 2 : width < 1024 ? 3 : width < 1280 ? 4 : 6;
       const rows = Math.ceil(12 / c);
 
-      const availableWidth = gridWrapRef.current?.clientWidth ?? width;
+      // Measured from contentAreaRef (the page container), not gridWrapRef
+      // itself — the grid no longer shrinks to fit (it's shrink-0), so
+      // measuring its own box would just echo back the last cardSize
+      // instead of the real available space. The burn sidebar's width is
+      // subtracted explicitly instead, since it sits outside this same box.
+      const containerWidth = contentAreaRef.current?.clientWidth ?? width;
+      const availableWidth = containerWidth - (burnSidebarOpen ? BURN_SIDEBAR_RESERVED : 0);
       const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
       const legendHeight = legendRef.current?.getBoundingClientRect().height ?? 40;
       const breathingRoom = 72; // grid-wrap py-6 (48) + legend's mt-3 (12) + safety buffer
@@ -239,10 +252,9 @@ export default function CalendarApp() {
       window.removeEventListener('resize', recompute);
       ro.disconnect();
     };
-    // showBurn is a dependency (not just an effect trigger) because the burn
-    // sidebar taking/releasing width changes gridWrapRef's clientWidth, and
-    // that only gets re-measured when this effect re-runs.
-  }, [showBurn]);
+    // burnSidebarOpen is a dependency because it changes how much width is
+    // reserved for the sidebar in the calculation above.
+  }, [burnSidebarOpen]);
 
   // Keep the tooltip fully on-screen even when hovering a day near the viewport edge.
   useLayoutEffect(() => {
@@ -435,12 +447,11 @@ export default function CalendarApp() {
 
   if (!resolved) return null;
 
-  // The burn sidebar (admin-only) adds ~226px alongside the grid. Widening
-  // the page container when it's open — instead of letting the sidebar eat
-  // into the grid's existing width — keeps month cards at their normal
-  // size, avoiding the clipped-last-row bug that showed up when the grid
-  // was squeezed below the size its font/padding floors need.
-  const containerMaxW = showBurn ? 'max-w-[1720px]' : 'max-w-[1500px]';
+  // The burn sidebar (admin-only) adds extra width alongside the grid.
+  // Widening the page container when it's open gives that extra width room
+  // to exist in, on top of the grid's own width now being protected by
+  // shrink-0 + the explicit reservation in the sizing effect above.
+  const containerMaxW = burnSidebarOpen ? 'max-w-[1720px]' : 'max-w-[1500px]';
 
   return (
     <>
@@ -586,9 +597,9 @@ export default function CalendarApp() {
     </div>
 
     <div className="flex-1 flex flex-col justify-center">
-    <div className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
-      <div className="flex gap-4 items-start">
-      <div className="flex-1 min-w-0">
+    <div ref={contentAreaRef} className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
+      <div className="flex gap-4 items-start overflow-x-auto">
+      <div className="shrink-0">
       <div ref={gridWrapRef}
         className="grid justify-center gap-3"
         style={{ gridTemplateColumns: `repeat(${cols}, ${cardSize ?? 100}px)` }}
@@ -642,7 +653,7 @@ export default function CalendarApp() {
       )}
       </div>
 
-      {showBurn && profile?.is_admin && <BurnSidebar citySlug={citySlug} cityName={resolved.city.name} />}
+      {burnSidebarOpen && <BurnSidebar citySlug={citySlug} cityName={resolved.city.name} />}
       </div>
     </div>
     </div>
