@@ -6,6 +6,8 @@ export interface RainDay {
   forecast_precip_mm: number | null;
   forecast_pop: number | null;
   actual_precip_mm: number | null;
+  forecast_temp_max: number | null; // °C
+  actual_temp_max: number | null; // °C
 }
 
 export async function GET(req: NextRequest) {
@@ -22,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('rain_daily')
-    .select('date, forecast_precip_mm, forecast_pop, actual_precip_mm')
+    .select('date, forecast_precip_mm, forecast_pop, actual_precip_mm, forecast_temp_max, actual_temp_max')
     .eq('city_slug', city)
     .gte('date', `${year}-01-01`)
     .lte('date', `${year}-12-31`);

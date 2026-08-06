@@ -70,6 +70,8 @@ export interface RainDay {
   forecast_precip_mm: number | null;
   forecast_pop: number | null;
   actual_precip_mm: number | null;
+  forecast_temp_max: number | null;
+  actual_temp_max: number | null;
 }
 
 // A day "counts" as rainy for the 💧 badge only at "moderate rain" or above
@@ -81,6 +83,16 @@ const RAIN_THRESHOLD_MM = 5;
 function isRainyDay(r: RainDay): boolean {
   if (r.actual_precip_mm !== null) return r.actual_precip_mm >= RAIN_THRESHOLD_MM;
   return (r.forecast_precip_mm ?? 0) >= RAIN_THRESHOLD_MM;
+}
+
+// Same idea for extreme heat: only flag days at/above the benchmark, actuals
+// take priority, and an upcoming forecast only shows the badge if it clears
+// the bar too (no "close to 35°C" hedging).
+const HEAT_THRESHOLD_C = 35;
+
+function isHeatDay(r: RainDay): boolean {
+  if (r.actual_temp_max !== null) return r.actual_temp_max >= HEAT_THRESHOLD_C;
+  return (r.forecast_temp_max ?? -Infinity) >= HEAT_THRESHOLD_C;
 }
 
 function dateKey(d: Date) {
@@ -577,6 +589,9 @@ export default function CalendarApp() {
         <span title={`Shown when ${RAIN_THRESHOLD_MM}mm+ of rain is forecast or actually fell that day — light rain/drizzle below that isn't flagged.`}>
           💧 Rain (≥{RAIN_THRESHOLD_MM}mm forecast or actual)
         </span>
+        <span title={`Shown when the daily high is forecast or actually reached ${HEAT_THRESHOLD_C}°C or above.`}>
+          🔥 Extreme heat (≥{HEAT_THRESHOLD_C}°C forecast or actual)
+        </span>
         {VISIBLE_CATEGORIES.map((cat) => (
           <span key={cat} className="flex items-center gap-1.5">
             <i className={`inline-block w-2.5 h-2.5 rounded-sm ${CATEGORY_META[cat].dot}`} />
@@ -717,6 +732,7 @@ function MonthGrid({
               ].join(' ');
 
               const rainy = info?.rain && isRainyDay(info.rain);
+              const hot = info?.rain && isHeatDay(info.rain);
 
               const tipParts = [`W${isoWeek(dt)}`];
               if (info?.holidayName) tipParts.push(info.holidayName);
@@ -732,10 +748,16 @@ function MonthGrid({
                   const mm = r.forecast_precip_mm !== null ? `${r.forecast_precip_mm.toFixed(1)}mm` : '';
                   tipParts.push(`🌧 ${[pop, mm].filter(Boolean).join(' · ')} (forecast)`);
                 }
+                if (r.actual_temp_max !== null) {
+                  tipParts.push(`🌡 ${r.actual_temp_max.toFixed(0)}°C (actual)`);
+                } else if (r.forecast_temp_max !== null) {
+                  tipParts.push(`🌡 ${r.forecast_temp_max.toFixed(0)}°C (forecast)`);
+                }
               }
               const tipText = tipParts.join(' · ');
 
-              const emojis = (info?.isPaycheck ? '💰' : '') + (info?.bonusName ? '🎁' : '') + (rainy ? '💧' : '');
+              const emojis =
+                (info?.isPaycheck ? '💰' : '') + (info?.bonusName ? '🎁' : '') + (rainy ? '💧' : '') + (hot ? '🔥' : '');
 
               return (
                 <div

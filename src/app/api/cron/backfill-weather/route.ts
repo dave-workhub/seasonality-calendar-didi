@@ -6,9 +6,9 @@ import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
  * One-time historical backfill — NOT wired into vercel.json crons, so it
  * never runs on a schedule. Visit it once by hand (with ?secret=<CRON_SECRET>
  * in the URL, since a plain browser visit can't set an Authorization header)
- * to fill in actual_precip_mm for every day since Jan 1 of the current year
- * up to yesterday, across all cities, in one shot via Open-Meteo's archive
- * API (which accepts a date range, not just a single day).
+ * to fill in actual_precip_mm and actual_temp_max for every day since Jan 1
+ * of the current year up to yesterday, across all cities, in one shot via
+ * Open-Meteo's archive API (which accepts a date range, not just a single day).
  *
  * After this runs once, the regular daily cron (/api/cron/sync-weather)
  * keeps extending the record one day at a time — nothing here needs to run
@@ -18,6 +18,7 @@ import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 interface OpenMeteoDaily {
   time: string[];
   precipitation_sum: number[];
+  temperature_2m_max: number[];
 }
 
 export async function GET(req: NextRequest) {
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
     try {
       const res = await fetch(
         `https://archive-api.open-meteo.com/v1/archive?latitude=${city.lat}&longitude=${city.lon}` +
-          `&start_date=${from}&end_date=${to}&daily=precipitation_sum&timezone=auto`
+          `&start_date=${from}&end_date=${to}&daily=precipitation_sum,temperature_2m_max&timezone=auto`
       );
       if (!res.ok) {
         results[city.slug] = `archive api ${res.status}`;
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
         city_slug: city.slug,
         date,
         actual_precip_mm: data.daily.precipitation_sum[i] ?? null,
+        actual_temp_max: data.daily.temperature_2m_max?.[i] ?? null,
       }));
       const { error } = await supabaseAdmin.from('rain_daily').upsert(rows, { onConflict: 'city_slug,date' });
       results[city.slug] = error ? error.message : `ok (${rows.length} days)`;

@@ -429,8 +429,11 @@ create policy "user re-requests after rejection" on city_permissions
   with check (auth.uid() = user_id and status = 'pending');
 
 -- ══════════════════════════════════════════════════════════════════
--- Rain — Open-Meteo forecast synced daily by /api/cron/sync-weather,
--- graded against actuals the following day.
+-- Rain / heat — Open-Meteo forecast synced daily by /api/cron/sync-weather,
+-- graded against actuals the following day. One row per city/day carries
+-- both precipitation and max-temperature fields since Open-Meteo returns
+-- them in the same request (the table predates the temperature columns,
+-- hence the name).
 -- ══════════════════════════════════════════════════════════════════
 
 create table if not exists rain_daily (
@@ -440,6 +443,8 @@ create table if not exists rain_daily (
   forecast_precip_mm numeric,
   forecast_pop numeric, -- probability of precipitation, 0-100
   actual_precip_mm numeric,
+  forecast_temp_max numeric, -- °C
+  actual_temp_max numeric, -- °C
   updated_at timestamptz not null default now(),
   unique (city_slug, date)
 );

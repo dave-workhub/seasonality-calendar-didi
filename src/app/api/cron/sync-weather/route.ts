@@ -3,14 +3,15 @@ import { ALL_CITIES } from '@/lib/cities';
 import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 /**
- * Daily rain sync — Open-Meteo (open-meteo.com), free and keyless.
+ * Daily rain + heat sync — Open-Meteo (open-meteo.com), free and keyless.
  *
  * Two calls per city:
- *  1. Forecast API — precipitation_sum (mm) + precipitation_probability_max (%)
- *     for the next ~14 days. Upserts forecast_* columns for those dates.
- *  2. Archive (historical) API — actual precipitation_sum for yesterday.
- *     Upserts actual_precip_mm on the row for that date, so a forecast made
- *     a few days ago gets "graded" against what really happened.
+ *  1. Forecast API — precipitation_sum (mm), precipitation_probability_max (%),
+ *     and temperature_2m_max (°C) for the next ~14 days. Upserts forecast_*
+ *     columns for those dates.
+ *  2. Archive (historical) API — actual precipitation_sum + temperature_2m_max
+ *     for yesterday. Upserts actual_* on the row for that date, so a forecast
+ *     made a few days ago gets "graded" against what really happened.
  *
  * Triggered by Vercel Cron (see vercel.json). Vercel sends
  * `Authorization: Bearer $CRON_SECRET` on cron-triggered requests when
@@ -24,6 +25,7 @@ interface OpenMeteoDaily {
   time: string[];
   precipitation_sum: number[];
   precipitation_probability_max?: number[];
+  temperature_2m_max?: number[];
 }
 
 function yesterday(): string {
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
       // 1. Forecast (next FORECAST_DAYS days).
       const fRes = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}` +
-          `&daily=precipitation_sum,precipitation_probability_max&timezone=auto&forecast_days=${FORECAST_DAYS}`
+          `&daily=precipitation_sum,precipitation_probability_max,temperature_2m_max&timezone=auto&forecast_days=${FORECAST_DAYS}`
       );
       if (fRes.ok) {
         const data: { daily: OpenMeteoDaily } = await fRes.json();
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest) {
           date,
           forecast_precip_mm: data.daily.precipitation_sum[i] ?? null,
           forecast_pop: data.daily.precipitation_probability_max?.[i] ?? null,
+          forecast_temp_max: data.daily.temperature_2m_max?.[i] ?? null,
         }));
         await supabaseAdmin.from('rain_daily').upsert(rows, { onConflict: 'city_slug,date' });
       }
@@ -68,15 +71,22 @@ export async function GET(req: NextRequest) {
       // 2. Actuals for yesterday, to grade the forecast made a few days ago.
       const aRes = await fetch(
         `https://archive-api.open-meteo.com/v1/archive?latitude=${city.lat}&longitude=${city.lon}` +
-          `&start_date=${y}&end_date=${y}&daily=precipitation_sum&timezone=auto`
+          `&start_date=${y}&end_date=${y}&daily=precipitation_sum,temperature_2m_max&timezone=auto`
       );
       if (aRes.ok) {
         const data: { daily: OpenMeteoDaily } = await aRes.json();
         const mm = data.daily.precipitation_sum?.[0];
-        if (mm !== undefined && mm !== null) {
-          await supabaseAdmin
-            .from('rain_daily')
-            .upsert({ city_slug: city.slug, date: y, actual_precip_mm: mm }, { onConflict: 'city_slug,date' });
+        const tMax = data.daily.temperature_2m_max?.[0];
+        if ((mm !== undefined && mm !== null) || (tMax !== undefined && tMax !== null)) {
+          await supabaseAdmin.from('rain_daily').upsert(
+            {
+              city_slug: city.slug,
+              date: y,
+              ...(mm !== undefined && mm !== null ? { actual_precip_mm: mm } : {}),
+              ...(tMax !== undefined && tMax !== null ? { actual_temp_max: tMax } : {}),
+            },
+            { onConflict: 'city_slug,date' }
+          );
         }
       }
 
