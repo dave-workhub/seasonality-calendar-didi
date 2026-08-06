@@ -208,7 +208,7 @@ export default function CalendarApp() {
   }, [session, profile, citySlug, dataVersion]);
 
   const headerRef = useRef<HTMLDivElement>(null);
-  const contentAreaRef = useRef<HTMLDivElement>(null); // the max-w container, NOT the grid itself
+  const contentAreaRef = useRef<HTMLDivElement>(null); // the unpadded flex row (grid + sidebar), NOT the padded max-w container or the grid itself
   const gridWrapRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(6);
@@ -227,11 +227,13 @@ export default function CalendarApp() {
       const c = Math.min(width < 640 ? 2 : width < 1024 ? 3 : width < 1280 ? 4 : 6, monthsShown);
       const rows = Math.ceil(monthsShown / c);
 
-      // Measured from contentAreaRef (the page container), not gridWrapRef
-      // itself — the grid no longer shrinks to fit (it's shrink-0), so
-      // measuring its own box would just echo back the last cardSize
-      // instead of the real available space. The burn sidebar's width is
-      // subtracted explicitly instead, since it sits outside this same box.
+      // Measured from contentAreaRef — the unpadded flex row wrapping both
+      // the grid and the sidebar — not gridWrapRef itself (which no longer
+      // shrinks to fit, so measuring its own box would just echo back the
+      // last cardSize) and not the padded max-w container (whose clientWidth
+      // includes the padding, overstating what children actually get). The
+      // burn sidebar's width is subtracted explicitly since it's a sibling
+      // inside this same row, not accounted for by the measurement itself.
       const containerWidth = contentAreaRef.current?.clientWidth ?? width;
       const availableWidth = containerWidth - (burnSidebarOpen ? BURN_SIDEBAR_RESERVED : 0);
       const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
@@ -607,8 +609,8 @@ export default function CalendarApp() {
     </div>
 
     <div className="flex-1 flex flex-col justify-center">
-    <div ref={contentAreaRef} className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
-      <div className="flex gap-4 items-start overflow-x-auto">
+    <div className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
+      <div ref={contentAreaRef} className="flex gap-4 items-start overflow-x-auto">
       <div className="shrink-0">
       {burnSidebarOpen && (
         <div className="flex items-center justify-center gap-3 mb-2">
