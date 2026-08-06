@@ -9,7 +9,7 @@ import AuthModal from './AuthModal';
 import HolidaysPanel from './EditPanel';
 import DayEventModal from './DayEventModal';
 import AdminPanel from './AdminPanel';
-import BurnPanel from './BurnPanel';
+import BurnSidebar from './BurnSidebar';
 
 export interface Profile {
   id: string;
@@ -239,7 +239,10 @@ export default function CalendarApp() {
       window.removeEventListener('resize', recompute);
       ro.disconnect();
     };
-  }, []);
+    // showBurn is a dependency (not just an effect trigger) because the burn
+    // sidebar taking/releasing width changes gridWrapRef's clientWidth, and
+    // that only gets re-measured when this effect re-runs.
+  }, [showBurn]);
 
   // Keep the tooltip fully on-screen even when hovering a day near the viewport edge.
   useLayoutEffect(() => {
@@ -505,10 +508,12 @@ export default function CalendarApp() {
               Admin
             </button>
             <button
-              onClick={() => setShowBurn(true)}
-              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+              onClick={() => setShowBurn((v) => !v)}
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                showBurn ? 'bg-[#2F6D46] text-white hover:bg-[#26593A]' : 'border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46]'
+              }`}
             >
-              Burn
+              Burn: {showBurn ? 'on' : 'off'}
             </button>
           </>
         )}
@@ -575,6 +580,8 @@ export default function CalendarApp() {
 
     <div className="flex-1 flex flex-col justify-center">
     <div className="max-w-[1500px] mx-auto w-full px-8 lg:px-14 py-6">
+      <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div ref={gridWrapRef}
         className="grid justify-center gap-3"
         style={{ gridTemplateColumns: `repeat(${cols}, ${cardSize ?? 100}px)` }}
@@ -626,6 +633,10 @@ export default function CalendarApp() {
           {tooltip.text}
         </div>
       )}
+      </div>
+
+      {showBurn && profile?.is_admin && <BurnSidebar citySlug={citySlug} cityName={resolved.city.name} />}
+      </div>
     </div>
     </div>
     </div>
@@ -655,8 +666,6 @@ export default function CalendarApp() {
     )}
 
     {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
-
-    {showBurn && <BurnPanel onClose={() => setShowBurn(false)} />}
     </>
   );
 }
