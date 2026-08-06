@@ -13,6 +13,8 @@ interface BurnRow {
   b_burn_nominal: number | null;
   c_burn_pct: number | null;
   c_burn_nominal: number | null;
+  b_locked: boolean;
+  c_locked: boolean;
   currency: string;
   updated_at: string;
 }
@@ -170,6 +172,73 @@ function aggregateWeekly(bRows: RawRow[], cRows: RawRow[], gmvRows: RawRow[], ci
     .sort((a, b) => a.isoYear - b.isoYear || a.isoWeek - b.isoWeek);
 }
 
+interface BurnCandidate {
+  city_slug: string;
+  iso_year: number;
+  iso_week: number;
+  b_burn_pct?: number | null;
+  b_burn_nominal?: number | null;
+  c_burn_pct?: number | null;
+  c_burn_nominal?: number | null;
+  currency: string;
+}
+
+// Shared by every write path (simple-template import, raw-CSV import, and
+// the manual edit form): looks up each week's existing b_locked/c_locked
+// flags first, then upserts — but a locked side is left out of that row's
+// payload entirely, so its current DB value survives untouched instead of
+// being overwritten by whatever this import computed.
+async function upsertRespectingLocks(
+  candidates: BurnCandidate[]
+): Promise<{ written: number; skippedB: number; skippedC: number; error: string | null }> {
+  if (!supabase || candidates.length === 0) return { written: 0, skippedB: 0, skippedC: 0, error: null };
+
+  const cities = [...new Set(candidates.map((c) => c.city_slug))];
+  const { data: existing, error: fetchErr } = await supabase
+    .from('weekly_burn')
+    .select('city_slug, iso_year, iso_week, b_locked, c_locked')
+    .in('city_slug', cities);
+  if (fetchErr) return { written: 0, skippedB: 0, skippedC: 0, error: fetchErr.message };
+
+  const lockMap = new Map<string, { b: boolean; c: boolean }>();
+  for (const row of existing ?? []) {
+    lockMap.set(`${row.city_slug}|${row.iso_year}|${row.iso_week}`, { b: row.b_locked, c: row.c_locked });
+  }
+
+  let written = 0;
+  let skippedB = 0;
+  let skippedC = 0;
+
+  for (const cand of candidates) {
+    const lock = lockMap.get(`${cand.city_slug}|${cand.iso_year}|${cand.iso_week}`);
+    const payload: Record<string, unknown> = {
+      city_slug: cand.city_slug,
+      iso_year: cand.iso_year,
+      iso_week: cand.iso_week,
+      currency: cand.currency,
+    };
+    if (lock?.b) {
+      skippedB++;
+    } else if (cand.b_burn_pct !== undefined || cand.b_burn_nominal !== undefined) {
+      payload.b_burn_pct = cand.b_burn_pct ?? null;
+      payload.b_burn_nominal = cand.b_burn_nominal ?? null;
+    }
+    if (lock?.c) {
+      skippedC++;
+    } else if (cand.c_burn_pct !== undefined || cand.c_burn_nominal !== undefined) {
+      payload.c_burn_pct = cand.c_burn_pct ?? null;
+      payload.c_burn_nominal = cand.c_burn_nominal ?? null;
+    }
+    // One upsert per row (not a batch) since the column set genuinely
+    // varies row to row depending on what's locked.
+    const { error: err } = await supabase.from('weekly_burn').upsert(payload, { onConflict: 'city_slug,iso_year,iso_week' });
+    if (err) return { written, skippedB, skippedC, error: err.message };
+    written++;
+  }
+
+  return { written, skippedB, skippedC, error: null };
+}
+
 // Percentage-point delta (not a relative %) — the right way to compare two
 // already-percentage values, e.g. 1.1% vs 0.9% is "+0.2pp", not "+22%".
 function ppDelta(current: number | null, prior: number | null): number | null {
@@ -258,6 +327,23 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   const [rawError, setRawError] = useState<string | null>(null);
   const [rawStatus, setRawStatus] = useState<string | null>(null);
 
+  // Manual edit form — null id means "adding a new week", otherwise editing
+  // the row with that id. Locking here always wins over whatever's in the
+  // DB already (the user is explicitly setting the value right now), unlike
+  // the CSV import paths which respect an existing lock and skip it.
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualEditingId, setManualEditingId] = useState<number | null>(null);
+  const [manualYear, setManualYear] = useState('');
+  const [manualWeek, setManualWeek] = useState('');
+  const [manualBPct, setManualBPct] = useState('');
+  const [manualBNom, setManualBNom] = useState('');
+  const [manualCPct, setManualCPct] = useState('');
+  const [manualCNom, setManualCNom] = useState('');
+  const [manualLockB, setManualLockB] = useState(true);
+  const [manualLockC, setManualLockC] = useState(true);
+  const [manualBusy, setManualBusy] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentWeek = isoWeek(now);
@@ -271,7 +357,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     const [burnRes, rainRes] = await Promise.all([
       supabase
         .from('weekly_burn')
-        .select('id, iso_year, iso_week, b_burn_pct, b_burn_nominal, c_burn_pct, c_burn_nominal, currency, updated_at')
+        .select('id, iso_year, iso_week, b_burn_pct, b_burn_nominal, c_burn_pct, c_burn_nominal, b_locked, c_locked, currency, updated_at')
         .eq('city_slug', citySlug)
         .order('iso_year', { ascending: false })
         .order('iso_week', { ascending: false }),
@@ -313,16 +399,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
       return;
     }
 
-    const payload: {
-      city_slug: string;
-      iso_year: number;
-      iso_week: number;
-      b_burn_pct: number | null;
-      b_burn_nominal: number | null;
-      c_burn_pct: number | null;
-      c_burn_nominal: number | null;
-      currency: string;
-    }[] = [];
+    const payload: BurnCandidate[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const cells = splitLine(lines[i]);
@@ -349,13 +426,14 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     }
 
     setBusy(true);
-    const { error: err } = await supabase.from('weekly_burn').upsert(payload, { onConflict: 'city_slug,iso_year,iso_week' });
+    const result = await upsertRespectingLocks(payload);
     setBusy(false);
-    if (err) {
-      setError(err.message);
+    if (result.error) {
+      setError(result.error);
       return;
     }
-    setStatus(`Imported ${payload.length} row${payload.length === 1 ? '' : 's'}.`);
+    const skipped = result.skippedB + result.skippedC > 0 ? ` (${result.skippedB + result.skippedC} locked field${result.skippedB + result.skippedC === 1 ? '' : 's'} left untouched)` : '';
+    setStatus(`Imported ${result.written} row${result.written === 1 ? '' : 's'}.${skipped}`);
     load();
   }
 
@@ -400,7 +478,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     }
 
     const currency = currencyForCity(citySlug) ?? 'USD';
-    const payload = weekly.map((w) => ({
+    const payload: BurnCandidate[] = weekly.map((w) => ({
       city_slug: citySlug,
       iso_year: w.isoYear,
       iso_week: w.isoWeek,
@@ -412,17 +490,82 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     }));
 
     setRawBusy(true);
-    const { error: err } = await supabase.from('weekly_burn').upsert(payload, { onConflict: 'city_slug,iso_year,iso_week' });
+    const result = await upsertRespectingLocks(payload);
     setRawBusy(false);
-    if (err) {
-      setRawError(err.message);
+    if (result.error) {
+      setRawError(result.error);
       return;
     }
-    setRawStatus(`Computed and uploaded ${payload.length} week${payload.length === 1 ? '' : 's'} for ${cityName}.`);
+    const skipped = result.skippedB + result.skippedC > 0 ? ` (${result.skippedB + result.skippedC} locked side${result.skippedB + result.skippedC === 1 ? '' : 's'} left untouched)` : '';
+    setRawStatus(`Computed and uploaded ${result.written} week${result.written === 1 ? '' : 's'} for ${cityName}.${skipped}`);
     setRawBRows([]);
     setRawCRows([]);
     setRawGmvRows([]);
     setRawFileNames({ b: null, c: null, gmv: null });
+    load();
+  }
+
+  function openManualNew() {
+    setManualEditingId(null);
+    setManualYear(String(currentYear));
+    setManualWeek(String(currentWeek));
+    setManualBPct('');
+    setManualBNom('');
+    setManualCPct('');
+    setManualCNom('');
+    setManualLockB(true);
+    setManualLockC(true);
+    setManualError(null);
+    setManualOpen(true);
+  }
+
+  function openManualEdit(r: BurnRow) {
+    setManualEditingId(r.id);
+    setManualYear(String(r.iso_year));
+    setManualWeek(String(r.iso_week));
+    setManualBPct(r.b_burn_pct?.toString() ?? '');
+    setManualBNom(r.b_burn_nominal?.toString() ?? '');
+    setManualCPct(r.c_burn_pct?.toString() ?? '');
+    setManualCNom(r.c_burn_nominal?.toString() ?? '');
+    setManualLockB(r.b_locked);
+    setManualLockC(r.c_locked);
+    setManualError(null);
+    setManualOpen(true);
+  }
+
+  async function saveManualEdit() {
+    if (!supabase) return;
+    const year = num(manualYear);
+    const week = num(manualWeek);
+    if (!year || !week) {
+      setManualError('Enter a year and week.');
+      return;
+    }
+    setManualBusy(true);
+    // Deliberately NOT going through upsertRespectingLocks — a manual edit
+    // is the one write path allowed to override an existing lock (that's
+    // the point of editing it), and it sets the lock flags itself below.
+    const { error: err } = await supabase.from('weekly_burn').upsert(
+      {
+        city_slug: citySlug,
+        iso_year: year,
+        iso_week: week,
+        b_burn_pct: num(manualBPct),
+        b_burn_nominal: num(manualBNom),
+        c_burn_pct: num(manualCPct),
+        c_burn_nominal: num(manualCNom),
+        b_locked: manualLockB,
+        c_locked: manualLockC,
+        currency: currencyForCity(citySlug) ?? 'USD',
+      },
+      { onConflict: 'city_slug,iso_year,iso_week' }
+    );
+    setManualBusy(false);
+    if (err) {
+      setManualError(err.message);
+      return;
+    }
+    setManualOpen(false);
     load();
   }
 
@@ -498,6 +641,96 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           </button>
           {rawStatus && <p className="text-[9px] text-[#2F6D46] m-0">{rawStatus}</p>}
           {rawError && <p className="text-[9px] text-red-600 m-0">{rawError}</p>}
+        </div>
+      )}
+
+      {canUpload && !manualOpen && (
+        <button onClick={openManualNew} className="text-[10px] text-[#2F6D46] underline mb-2 block">
+          + Edit a week manually
+        </button>
+      )}
+
+      {canUpload && manualOpen && (
+        <div className="mb-3 flex flex-col gap-1.5 border border-dashed border-neutral-300 rounded-md p-2">
+          <p className="text-[9px] text-neutral-500 leading-[1.4] m-0">
+            {manualEditingId !== null
+              ? 'Editing this week directly. Locked sides are ignored by future CSV imports until you uncheck the lock.'
+              : 'Add or overwrite a week directly — leave a field blank to leave it empty.'}
+          </p>
+          <div className="flex gap-1.5">
+            <input
+              type="number"
+              placeholder="Year"
+              value={manualYear}
+              onChange={(e) => setManualYear(e.target.value)}
+              disabled={manualEditingId !== null}
+              className="w-16 text-[10px] border border-neutral-200 rounded px-1.5 py-1 disabled:opacity-50"
+            />
+            <input
+              type="number"
+              placeholder="Week"
+              value={manualWeek}
+              onChange={(e) => setManualWeek(e.target.value)}
+              disabled={manualEditingId !== null}
+              className="w-16 text-[10px] border border-neutral-200 rounded px-1.5 py-1 disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              placeholder="B burn %"
+              value={manualBPct}
+              onChange={(e) => setManualBPct(e.target.value)}
+              className="w-20 text-[10px] border border-neutral-200 rounded px-1.5 py-1"
+            />
+            <input
+              type="number"
+              placeholder="B nominal (optional)"
+              value={manualBNom}
+              onChange={(e) => setManualBNom(e.target.value)}
+              className="flex-1 min-w-0 text-[10px] border border-neutral-200 rounded px-1.5 py-1"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 text-[9px] text-neutral-500">
+            <input type="checkbox" checked={manualLockB} onChange={(e) => setManualLockB(e.target.checked)} />
+            Lock B (ignore future CSV imports for this side)
+          </label>
+
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              placeholder="C burn %"
+              value={manualCPct}
+              onChange={(e) => setManualCPct(e.target.value)}
+              className="w-20 text-[10px] border border-neutral-200 rounded px-1.5 py-1"
+            />
+            <input
+              type="number"
+              placeholder="C nominal (optional)"
+              value={manualCNom}
+              onChange={(e) => setManualCNom(e.target.value)}
+              className="flex-1 min-w-0 text-[10px] border border-neutral-200 rounded px-1.5 py-1"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 text-[9px] text-neutral-500">
+            <input type="checkbox" checked={manualLockC} onChange={(e) => setManualLockC(e.target.checked)} />
+            Lock C (ignore future CSV imports for this side)
+          </label>
+
+          <div className="flex gap-1.5 mt-1">
+            <button
+              onClick={saveManualEdit}
+              disabled={manualBusy}
+              className="text-[10px] px-2 py-1 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50"
+            >
+              {manualBusy ? 'Saving…' : 'Save'}
+            </button>
+            <button onClick={() => setManualOpen(false)} className="text-[10px] px-2 py-1 rounded-md border border-neutral-200 text-neutral-600">
+              Cancel
+            </button>
+          </div>
+          {manualError && <p className="text-[9px] text-red-600 m-0">{manualError}</p>}
         </div>
       )}
 
@@ -600,14 +833,23 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
                 key={r.id}
                 className={`rounded-md border px-2 py-1.5 ${isCurrent ? 'border-[#9AC7A4] bg-[#eef7f0]' : 'border-neutral-100'}`}
               >
-                <p className={`text-[10px] font-medium mb-0.5 ${isCurrent ? 'text-[#1E4A2C]' : 'text-neutral-500'}`}>
-                  Week {r.iso_week} · {isoWeekLabel(r.iso_year, r.iso_week)}
-                </p>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className={`text-[10px] font-medium m-0 ${isCurrent ? 'text-[#1E4A2C]' : 'text-neutral-500'}`}>
+                    Week {r.iso_week} · {isoWeekLabel(r.iso_year, r.iso_week)}
+                  </p>
+                  {canUpload && (
+                    <button onClick={() => openManualEdit(r)} className="text-[9px] text-[#2F6D46] underline shrink-0">
+                      Edit
+                    </button>
+                  )}
+                </div>
                 <p className="text-[10px] text-neutral-700">
                   B {r.b_burn_pct ?? '—'}% · {r.currency} {fmtNum(r.b_burn_nominal)} <DeltaBadge pp={bDelta} />
+                  {r.b_locked && <span title="Locked — CSV imports skip this side">🔒</span>}
                 </p>
                 <p className="text-[10px] text-neutral-700">
                   C {r.c_burn_pct ?? '—'}% · {r.currency} {fmtNum(r.c_burn_nominal)} <DeltaBadge pp={cDelta} />
+                  {r.c_locked && <span title="Locked — CSV imports skip this side">🔒</span>}
                 </p>
               </div>
             );

@@ -458,8 +458,13 @@ create policy "public read rain_daily" on rain_daily for select using (true);
 -- bypasses RLS) writes to this table.
 
 -- ══════════════════════════════════════════════════════════════════
--- Weekly B-burn (driver) / C-burn (passenger) — admin-only, imported by
--- hand from a Google Sheet CSV export via the Burn tab in the app.
+-- Weekly B-burn (driver) / C-burn (passenger) — publicly viewable (no
+-- sign-in needed), but only admins can write. Imported from a Google Sheet
+-- CSV export (either the simple weekly-summary template, or the raw daily
+-- exports which the app aggregates into weekly totals itself) via the Burn
+-- sidebar in the app. b_locked/c_locked let a manual correction in the app
+-- survive a later CSV import untouched — the importer skips a side once
+-- it's locked, instead of overwriting it with the recomputed value.
 -- ══════════════════════════════════════════════════════════════════
 
 create table if not exists weekly_burn (
@@ -471,6 +476,8 @@ create table if not exists weekly_burn (
   b_burn_nominal numeric,
   c_burn_pct numeric,
   c_burn_nominal numeric,
+  b_locked boolean not null default false,
+  c_locked boolean not null default false,
   currency text not null, -- e.g. COP, MXN — set by the importer from the city's country
   updated_at timestamptz not null default now(),
   unique (city_slug, iso_year, iso_week)
@@ -478,8 +485,19 @@ create table if not exists weekly_burn (
 
 alter table weekly_burn enable row level security;
 
--- Admin-only, both read and write. No public policy — signed-out/non-admin
--- users get nothing back at all, not even a permissions error.
 drop policy if exists "admin only weekly_burn" on weekly_burn;
-create policy "admin only weekly_burn" on weekly_burn
-  for all using (is_admin()) with check (is_admin());
+drop policy if exists "public read weekly_burn" on weekly_burn;
+create policy "public read weekly_burn" on weekly_burn
+  for select using (true);
+
+drop policy if exists "admin write weekly_burn" on weekly_burn;
+create policy "admin write weekly_burn" on weekly_burn
+  for insert with check (is_admin());
+
+drop policy if exists "admin update weekly_burn" on weekly_burn;
+create policy "admin update weekly_burn" on weekly_burn
+  for update using (is_admin()) with check (is_admin());
+
+drop policy if exists "admin delete weekly_burn" on weekly_burn;
+create policy "admin delete weekly_burn" on weekly_burn
+  for delete using (is_admin());
