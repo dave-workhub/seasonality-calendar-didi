@@ -42,7 +42,7 @@ function num(v: string): number | null {
 export default function BurnPanel({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<BurnRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [csv, setCsv] = useState('');
+  const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -65,12 +65,12 @@ export default function BurnPanel({ onClose }: { onClose: () => void }) {
     load();
   }, []);
 
-  async function importCsv() {
-    if (!supabase || !csv.trim()) return;
+  async function importCsv(csvText: string) {
+    if (!supabase || !csvText.trim()) return;
     setError(null);
     setStatus(null);
 
-    const lines = csv.trim().split('\n').filter((l) => l.trim() !== '');
+    const lines = csvText.trim().split('\n').filter((l) => l.trim() !== '');
     if (lines.length < 2) {
       setError('Paste the header row plus at least one data row.');
       return;
@@ -130,8 +130,17 @@ export default function BurnPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     setStatus(`Imported ${payload.length} row${payload.length === 1 ? '' : 's'}.`);
-    setCsv('');
     load();
+  }
+
+  function handleFile(file: File) {
+    setFileName(file.name);
+    setError(null);
+    setStatus(null);
+    const reader = new FileReader();
+    reader.onload = () => importCsv(String(reader.result ?? ''));
+    reader.onerror = () => setError("Couldn't read that file.");
+    reader.readAsText(file);
   }
 
   async function removeRow(id: number) {
@@ -148,23 +157,28 @@ export default function BurnPanel({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-neutral-900 mb-1">Weekly burn</h2>
-        <p className="text-xs text-neutral-400 mb-4">Admin only. Paste a CSV export from the weekly Google Sheet template below.</p>
+        <p className="text-xs text-neutral-400 mb-4">
+          Admin only. Upload the .csv you downloaded from the weekly Google Sheet template (File → Download → CSV).
+        </p>
 
-        <textarea
-          value={csv}
-          onChange={(e) => setCsv(e.target.value)}
-          placeholder="Year,Week,City,B Burn %,B Burn Nominal,C Burn %,C Burn Nominal&#10;2026,32,cartagena,4.2,18500,2.8,9200"
-          rows={4}
-          className="w-full border border-neutral-200 rounded-md px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#2F6D46] mb-2"
-        />
         <div className="flex items-center gap-2 mb-5">
-          <button
-            onClick={importCsv}
-            disabled={busy || !csv.trim()}
-            className="text-xs px-3 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50"
+          <label
+            className={`text-xs px-3 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            Import
-          </button>
+            {busy ? 'Importing…' : 'Choose CSV file'}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+                e.target.value = ''; // allow re-selecting the same file name later
+              }}
+            />
+          </label>
+          {fileName && <span className="text-xs text-neutral-400">{fileName}</span>}
           {status && <span className="text-xs text-[#2F6D46]">{status}</span>}
           {error && <span className="text-xs text-red-600">{error}</span>}
         </div>
