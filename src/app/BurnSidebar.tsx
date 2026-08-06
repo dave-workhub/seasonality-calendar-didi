@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { currencyForCity } from '@/lib/cities';
-import { isoWeek, isoWeekLabel } from '@/lib/holidays';
+import { isoWeek, isoWeekLabel, isoYear } from '@/lib/holidays';
 
 interface BurnRow {
   id: number;
@@ -22,7 +22,7 @@ interface BurnRow {
 const EXPECTED_HEADERS = ['year', 'week', 'city', 'bburn%', 'bburnnominal', 'cburn%', 'cburnnominal'];
 
 function normalizeHeader(h: string) {
-  return h.trim().toLowerCase().replace(/\s+/g, '');
+  return h.trim().toLowerCase().replace(/[\s_]+/g, '');
 }
 
 // Proper CSV/TSV line split — respects quoted fields (so "$ 1,234,567" with
@@ -59,7 +59,14 @@ function splitLine(line: string): string[] {
 // Strips currency symbols, percent signs, spaces, and thousands separators.
 function num(v: string): number | null {
   if (v === undefined || v === null) return null;
-  const cleaned = v.replace(/[^0-9.\-]/g, '');
+  const trimmed = v.trim();
+  // Scientific notation (e.g. "1.58E+08") — handle before the strip below
+  // would mangle the exponent's "E+" into garbage.
+  if (/^-?\d+(\.\d+)?[eE][+-]?\d+$/.test(trimmed)) {
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n : null;
+  }
+  const cleaned = trimmed.replace(/[^0-9.\-]/g, '');
   if (cleaned === '' || cleaned === '-') return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
@@ -68,6 +75,99 @@ function num(v: string): number | null {
 function fmtNum(n: number | null) {
   if (n === null) return '—';
   return n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toString();
+}
+
+interface RawRow {
+  date: Date;
+  city: string;
+  value: number;
+}
+
+// Parses a raw daily-level export (date + city + one value column, plus
+// whatever other columns — spend_channel, creator, product_id, etc. — get
+// ignored) into {date, city, value} rows. Columns are found by fuzzy header
+// match, not fixed position, since exports may reorder columns.
+function parseRawCsv(text: string, valueAliases: string[]): { rows: RawRow[]; error: string | null } {
+  const lines = text.trim().split('\n').filter((l) => l.trim() !== '');
+  if (lines.length < 2) return { rows: [], error: 'File needs a header row plus at least one data row.' };
+
+  const header = splitLine(lines[0]).map(normalizeHeader);
+  const dateIdx = header.findIndex((h) => h.includes('date'));
+  const cityIdx = header.findIndex((h) => h.includes('city'));
+  const valueIdx = header.findIndex((h) => valueAliases.includes(h));
+
+  if (dateIdx === -1 || cityIdx === -1 || valueIdx === -1) {
+    return { rows: [], error: `Couldn't find date/city/value columns in the header (looked for a "date" column, a "city" column, and one of: ${valueAliases.join(', ')}).` };
+  }
+
+  const rows: RawRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = splitLine(lines[i]);
+    const dateStr = cells[dateIdx];
+    const city = (cells[cityIdx] ?? '').trim();
+    const value = num(cells[valueIdx]);
+    if (!dateStr || !city || value === null) continue; // skip malformed/blank rows silently
+    // Handles "2026-01-21" and "2026-01-21 0:00" alike. Built via the
+    // (year, month, day) constructor rather than new Date("2026-01-21") —
+    // that string form parses as UTC midnight per spec, which silently
+    // shifts a day off in any timezone behind UTC (Colombia, Mexico) once
+    // isoWeek/isoYear's local-time methods touch it.
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+    if (!y || !m || !d) continue;
+    const date = new Date(y, m - 1, d);
+    if (Number.isNaN(date.getTime())) continue;
+    rows.push({ date, city, value });
+  }
+  return { rows, error: null };
+}
+
+interface WeeklyTotals {
+  isoYear: number;
+  isoWeek: number;
+  bSum: number | null;
+  cSum: number | null;
+  gmvSum: number | null;
+}
+
+// Groups three raw daily datasets (already filtered to the right user, per
+// the Sheets FILTER formulas) by ISO week, filters to the current city by
+// name, sums each, and derives B/C burn % from nominal ÷ GMV.
+function aggregateWeekly(bRows: RawRow[], cRows: RawRow[], gmvRows: RawRow[], cityName: string): WeeklyTotals[] {
+  const cityLower = cityName.trim().toLowerCase();
+  const matchesCity = (r: RawRow) => r.city.trim().toLowerCase() === cityLower;
+
+  const sumByWeek = (rows: RawRow[]) => {
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      if (!matchesCity(r)) continue;
+      const key = weekKey(isoYear(r.date), isoWeek(r.date));
+      map.set(key, (map.get(key) ?? 0) + r.value);
+    }
+    return map;
+  };
+
+  const bMap = sumByWeek(bRows);
+  const cMap = sumByWeek(cRows);
+  const gmvMap = sumByWeek(gmvRows);
+
+  const allKeys = new Set([...bMap.keys(), ...cMap.keys()]);
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  return Array.from(allKeys)
+    .map((key) => {
+      const [yearStr, weekStr] = key.split('-W');
+      const gmv = gmvMap.get(key) ?? null;
+      const bSum = bMap.get(key) ?? null;
+      const cSum = cMap.get(key) ?? null;
+      return {
+        isoYear: Number(yearStr),
+        isoWeek: Number(weekStr),
+        bSum: bSum !== null ? round2(bSum) : null,
+        cSum: cSum !== null ? round2(cSum) : null,
+        gmvSum: gmv !== null ? round2(gmv) : null,
+      };
+    })
+    .sort((a, b) => a.isoYear - b.isoYear || a.isoWeek - b.isoWeek);
 }
 
 // Percentage-point delta (not a relative %) — the right way to compare two
@@ -148,6 +248,15 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   const [weekAKey, setWeekAKey] = useState<string | null>(null);
   const [weekBKey, setWeekBKey] = useState<string | null>(null);
   const [rainSyncedAt, setRainSyncedAt] = useState<string | null>(null);
+
+  const [showRawImport, setShowRawImport] = useState(false);
+  const [rawBRows, setRawBRows] = useState<RawRow[]>([]);
+  const [rawCRows, setRawCRows] = useState<RawRow[]>([]);
+  const [rawGmvRows, setRawGmvRows] = useState<RawRow[]>([]);
+  const [rawFileNames, setRawFileNames] = useState<{ b: string | null; c: string | null; gmv: string | null }>({ b: null, c: null, gmv: null });
+  const [rawBusy, setRawBusy] = useState(false);
+  const [rawError, setRawError] = useState<string | null>(null);
+  const [rawStatus, setRawStatus] = useState<string | null>(null);
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -259,6 +368,64 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     reader.readAsText(file);
   }
 
+  function handleRawFile(kind: 'b' | 'c' | 'gmv', file: File, valueAliases: string[]) {
+    setRawError(null);
+    setRawStatus(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const { rows, error: err } = parseRawCsv(String(reader.result ?? ''), valueAliases);
+      if (err) {
+        setRawError(`${file.name}: ${err}`);
+        return;
+      }
+      setRawFileNames((f) => ({ ...f, [kind]: file.name }));
+      if (kind === 'b') setRawBRows(rows);
+      else if (kind === 'c') setRawCRows(rows);
+      else setRawGmvRows(rows);
+    };
+    reader.onerror = () => setRawError(`Couldn't read ${file.name}.`);
+    reader.readAsText(file);
+  }
+
+  async function uploadRawAggregates() {
+    if (!supabase) return;
+    if (rawBRows.length === 0 && rawCRows.length === 0) {
+      setRawError('Upload at least the B burn or C burn file first.');
+      return;
+    }
+    const weekly = aggregateWeekly(rawBRows, rawCRows, rawGmvRows, cityName);
+    if (weekly.length === 0) {
+      setRawError(`No rows matched city "${cityName}" — check the raw files were filtered/exported for the right city.`);
+      return;
+    }
+
+    const currency = currencyForCity(citySlug) ?? 'USD';
+    const payload = weekly.map((w) => ({
+      city_slug: citySlug,
+      iso_year: w.isoYear,
+      iso_week: w.isoWeek,
+      b_burn_nominal: w.bSum,
+      c_burn_nominal: w.cSum,
+      b_burn_pct: w.bSum !== null && w.gmvSum ? Math.round((w.bSum / w.gmvSum) * 10000) / 100 : null,
+      c_burn_pct: w.cSum !== null && w.gmvSum ? Math.round((w.cSum / w.gmvSum) * 10000) / 100 : null,
+      currency,
+    }));
+
+    setRawBusy(true);
+    const { error: err } = await supabase.from('weekly_burn').upsert(payload, { onConflict: 'city_slug,iso_year,iso_week' });
+    setRawBusy(false);
+    if (err) {
+      setRawError(err.message);
+      return;
+    }
+    setRawStatus(`Computed and uploaded ${payload.length} week${payload.length === 1 ? '' : 's'} for ${cityName}.`);
+    setRawBRows([]);
+    setRawCRows([]);
+    setRawGmvRows([]);
+    setRawFileNames({ b: null, c: null, gmv: null });
+    load();
+  }
+
   const weekOptions = rows.map((r) => ({ key: weekKey(r.iso_year, r.iso_week), label: `Week ${r.iso_week} · ${r.iso_year}` }));
   const weekA = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekAKey) ?? null;
   const weekB = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekBKey) ?? null;
@@ -288,6 +455,51 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           </label>
         )}
       </div>
+
+      {canUpload && (
+        <button onClick={() => setShowRawImport((v) => !v)} className="text-[10px] text-[#2F6D46] underline mb-2 block">
+          {showRawImport ? '← Hide raw weekly import' : 'Raw weekly import →'}
+        </button>
+      )}
+
+      {canUpload && showRawImport && (
+        <div className="mb-3 flex flex-col gap-1.5 border border-dashed border-neutral-300 rounded-md p-2">
+          <p className="text-[9px] text-neutral-500 leading-[1.4] m-0">
+            Upload the 3 filtered raw exports (B burn, C burn, GMV) — weeks and B/C burn % are computed automatically.
+          </p>
+          {(
+            [
+              { kind: 'b' as const, label: 'B burn raw', aliases: ['bburn'], value: rawFileNames.b },
+              { kind: 'c' as const, label: 'C burn raw', aliases: ['cburn', 'totalspend'], value: rawFileNames.c },
+              { kind: 'gmv' as const, label: 'GMV raw', aliases: ['gmv'], value: rawFileNames.gmv },
+            ]
+          ).map(({ kind, label, aliases, value }) => (
+            <label key={kind} className="text-[10px] text-neutral-600 flex items-center justify-between cursor-pointer">
+              <span>{label}</span>
+              <span className={`underline ${value ? 'text-[#2F6D46]' : 'text-neutral-400'}`}>{value ?? 'Choose file'}</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleRawFile(kind, file, aliases);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          ))}
+          <button
+            onClick={uploadRawAggregates}
+            disabled={rawBusy || (rawBRows.length === 0 && rawCRows.length === 0)}
+            className="text-[10px] px-2 py-1 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50 mt-1"
+          >
+            {rawBusy ? 'Computing…' : 'Compute & upload'}
+          </button>
+          {rawStatus && <p className="text-[9px] text-[#2F6D46] m-0">{rawStatus}</p>}
+          {rawError && <p className="text-[9px] text-red-600 m-0">{rawError}</p>}
+        </div>
+      )}
 
       <div className="text-[9px] text-neutral-400 leading-[1.5] mb-2.5">
         {fmtTimestamp(rainSyncedAt) && <p className="m-0">Rain/heat synced {fmtTimestamp(rainSyncedAt)}</p>}

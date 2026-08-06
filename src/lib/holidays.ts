@@ -250,6 +250,21 @@ export function isoWeek(dt: Date): number {
   return Math.ceil(((d.getTime() - y1.getTime()) / 86400000 + 1) / 7);
 }
 
+/**
+ * ISO year — NOT always the same as the calendar year. Late-December dates
+ * can belong to week 1 of the following year (and early-January dates can
+ * belong to week 52/53 of the previous year). Shifts to the Thursday of the
+ * same ISO week (same trick isoWeek() uses) and reads that date's calendar
+ * year, since ISO 8601 defines the week's year as whichever year contains
+ * its Thursday.
+ */
+export function isoYear(dt: Date): number {
+  const d = new Date(dt);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  return d.getFullYear();
+}
+
 /** Monday of a given ISO week/year — inverse of isoWeek(). Jan 4 always falls in week 1. */
 export function isoWeekMonday(year: number, week: number): Date {
   const jan4 = new Date(year, 0, 4);
