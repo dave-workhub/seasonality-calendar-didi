@@ -87,7 +87,7 @@ function weekKey(year: number, week: number) {
   return `${year}-W${week}`;
 }
 
-export default function BurnSidebar({ citySlug, cityName }: { citySlug: string; cityName: string }) {
+export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlug: string; cityName: string; canUpload: boolean }) {
   const [rows, setRows] = useState<BurnRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -210,20 +210,22 @@ export default function BurnSidebar({ citySlug, cityName }: { citySlug: string; 
     <div className="w-[210px] shrink-0 border-l border-neutral-200 pl-4">
       <div className="flex items-center justify-between mb-2">
         <p className="text-[11px] font-medium text-neutral-500">{cityName} · weekly burn</p>
-        <label className={`text-[10px] text-[#2F6D46] underline cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
-          {busy ? 'Uploading…' : 'Upload CSV'}
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            disabled={busy}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
-              e.target.value = '';
-            }}
-          />
-        </label>
+        {canUpload && (
+          <label className={`text-[10px] text-[#2F6D46] underline cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
+            {busy ? 'Uploading…' : 'Upload CSV'}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        )}
       </div>
 
       {status && <p className="text-[10px] text-[#2F6D46] mb-2">{status}</p>}

@@ -214,7 +214,10 @@ export default function CalendarApp() {
   const [cols, setCols] = useState(6);
   const [cardSize, setCardSize] = useState<number | null>(null);
 
-  const burnSidebarOpen = showBurn && !!profile?.is_admin;
+  // Viewing the burn sidebar (and Compare weeks) is public — no sign-in
+  // required. Only uploading a CSV is admin-gated, both in the UI (below)
+  // and at the database level (RLS on weekly_burn).
+  const burnSidebarOpen = showBurn;
 
   // Size each month card so the whole grid — square cards included — always
   // fits the viewport without scrolling, at any window size.
@@ -530,23 +533,22 @@ export default function CalendarApp() {
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
         {profile?.is_admin && (
-          <>
-            <button
-              onClick={() => setShowAdmin(true)}
-              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
-            >
-              Admin
-            </button>
-            <button
-              onClick={() => setShowBurn((v) => !v)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                showBurn ? 'bg-[#2F6D46] text-white hover:bg-[#26593A]' : 'border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46]'
-              }`}
-            >
-              Burn: {showBurn ? 'on' : 'off'}
-            </button>
-          </>
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+          >
+            Admin
+          </button>
         )}
+
+        <button
+          onClick={() => setShowBurn((v) => !v)}
+          className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+            showBurn ? 'bg-[#2F6D46] text-white hover:bg-[#26593A]' : 'border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46]'
+          }`}
+        >
+          Burn: {showBurn ? 'on' : 'off'}
+        </button>
 
         {canEdit && (
           <>
@@ -689,7 +691,7 @@ export default function CalendarApp() {
       )}
       </div>
 
-      {burnSidebarOpen && <BurnSidebar citySlug={citySlug} cityName={resolved.city.name} />}
+      {burnSidebarOpen && <BurnSidebar citySlug={citySlug} cityName={resolved.city.name} canUpload={!!profile?.is_admin} />}
       </div>
     </div>
     </div>
