@@ -14,6 +14,7 @@ interface BurnRow {
   c_burn_pct: number | null;
   c_burn_nominal: number | null;
   currency: string;
+  updated_at: string;
 }
 
 // Expected header cells, case/space-insensitive, in this column order:
@@ -87,6 +88,56 @@ function weekKey(year: number, week: number) {
   return `${year}-W${week}`;
 }
 
+function fmtTimestamp(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const month = d.toLocaleString('en', { month: 'short', timeZone: 'UTC' });
+  const day = d.getUTCDate();
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${month} ${day}, ${hh}:${mm} UTC`;
+}
+
+// Small dual-line trend chart: B burn (green) and C burn (pink) over the
+// last few weeks, oldest to newest. Points with no data leave a gap rather
+// than being guessed at.
+function BurnSparkline({ points }: { points: { b: number | null; c: number | null }[] }) {
+  const n = points.length;
+  if (n < 2) return null;
+
+  const allVals = points.flatMap((p) => [p.b, p.c]).filter((v): v is number => v !== null);
+  if (allVals.length === 0) return null;
+
+  const W = 200;
+  const H = 44;
+  const PAD = 4;
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const range = max - min || 1;
+  const xStep = W / (n - 1);
+  const toY = (v: number) => H - PAD - ((v - min) / range) * (H - PAD * 2);
+
+  const linePoints = (key: 'b' | 'c') =>
+    points
+      .map((p, i) => (p[key] !== null ? `${(i * xStep).toFixed(1)},${toY(p[key] as number).toFixed(1)}` : null))
+      .filter((v): v is string => v !== null)
+      .join(' ');
+
+  const lastB = [...points].reverse().find((p) => p.b !== null);
+  const lastC = [...points].reverse().find((p) => p.c !== null);
+  const lastBIdx = lastB ? points.lastIndexOf(lastB) : -1;
+  const lastCIdx = lastC ? points.lastIndexOf(lastC) : -1;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-11 mb-1">
+      <polyline points={linePoints('b')} fill="none" stroke="#2F6D46" strokeWidth="2" />
+      <polyline points={linePoints('c')} fill="none" stroke="#D4537E" strokeWidth="2" />
+      {lastBIdx >= 0 && <circle cx={lastBIdx * xStep} cy={toY(lastB!.b as number)} r="2.5" fill="#2F6D46" />}
+      {lastCIdx >= 0 && <circle cx={lastCIdx * xStep} cy={toY(lastC!.c as number)} r="2.5" fill="#D4537E" />}
+    </svg>
+  );
+}
+
 export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlug: string; cityName: string; canUpload: boolean }) {
   const [rows, setRows] = useState<BurnRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +147,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   const [showCompare, setShowCompare] = useState(false);
   const [weekAKey, setWeekAKey] = useState<string | null>(null);
   const [weekBKey, setWeekBKey] = useState<string | null>(null);
+  const [rainSyncedAt, setRainSyncedAt] = useState<string | null>(null);
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -105,21 +157,26 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     if (!supabase) return;
     setLoading(true);
     // Fetches full history for this city (not just recent weeks) so the
-    // Compare panel below can reach back across years.
-    const { data, error: err } = await supabase
-      .from('weekly_burn')
-      .select('id, iso_year, iso_week, b_burn_pct, b_burn_nominal, c_burn_pct, c_burn_nominal, currency')
-      .eq('city_slug', citySlug)
-      .order('iso_year', { ascending: false })
-      .order('iso_week', { ascending: false });
-    if (err) {
-      setError(err.message);
+    // Compare panel below can reach back across years. Also grabs the most
+    // recent rain_daily sync timestamp for this city, for the freshness line.
+    const [burnRes, rainRes] = await Promise.all([
+      supabase
+        .from('weekly_burn')
+        .select('id, iso_year, iso_week, b_burn_pct, b_burn_nominal, c_burn_pct, c_burn_nominal, currency, updated_at')
+        .eq('city_slug', citySlug)
+        .order('iso_year', { ascending: false })
+        .order('iso_week', { ascending: false }),
+      supabase.from('rain_daily').select('updated_at').eq('city_slug', citySlug).order('updated_at', { ascending: false }).limit(1),
+    ]);
+    if (burnRes.error) {
+      setError(burnRes.error.message);
     } else {
-      const fetched = (data ?? []) as BurnRow[];
+      const fetched = (burnRes.data ?? []) as BurnRow[];
       setRows(fetched);
       setWeekAKey(fetched[0] ? weekKey(fetched[0].iso_year, fetched[0].iso_week) : null);
       setWeekBKey(fetched[1] ? weekKey(fetched[1].iso_year, fetched[1].iso_week) : null);
     }
+    setRainSyncedAt(rainRes.data?.[0]?.updated_at ?? null);
     setLoading(false);
   }
 
@@ -206,6 +263,10 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   const weekA = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekAKey) ?? null;
   const weekB = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekBKey) ?? null;
 
+  const burnUploadedAt = rows.length > 0 ? rows.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), rows[0].updated_at) : null;
+  // Sparkline wants oldest-to-newest, left to right — rows are fetched newest-first.
+  const sparkPoints = [...rows.slice(0, 8)].reverse().map((r) => ({ b: r.b_burn_pct, c: r.c_burn_pct }));
+
   return (
     <div className="w-[210px] shrink-0 border-l border-neutral-200 pl-4">
       <div className="flex items-center justify-between mb-2">
@@ -227,6 +288,26 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           </label>
         )}
       </div>
+
+      <div className="text-[9px] text-neutral-400 leading-[1.5] mb-2.5">
+        {fmtTimestamp(rainSyncedAt) && <p className="m-0">Rain/heat synced {fmtTimestamp(rainSyncedAt)}</p>}
+        {fmtTimestamp(burnUploadedAt) && <p className="m-0">Burn last uploaded {fmtTimestamp(burnUploadedAt)}</p>}
+      </div>
+
+      {!showCompare && sparkPoints.length >= 2 && (
+        <div className="mb-2">
+          <p className="text-[10px] font-medium text-neutral-500 mb-1">Last {sparkPoints.length} weeks</p>
+          <BurnSparkline points={sparkPoints} />
+          <div className="flex gap-2.5 text-[9px] text-neutral-500">
+            <span>
+              <i className="inline-block w-2 h-2 rounded-full bg-[#2F6D46] mr-1" />B burn
+            </span>
+            <span>
+              <i className="inline-block w-2 h-2 rounded-full bg-[#D4537E] mr-1" />C burn
+            </span>
+          </div>
+        </div>
+      )}
 
       {status && <p className="text-[10px] text-[#2F6D46] mb-2">{status}</p>}
       {error && <p className="text-[10px] text-red-600 mb-2">{error}</p>}
