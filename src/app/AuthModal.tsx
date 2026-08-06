@@ -52,7 +52,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 setSignupDone(false);
                 setMode('login');
               }}
-              className="px-4 py-1.5 rounded-md bg-[#FD7C41] text-white text-sm font-medium hover:bg-[#e86d34] transition-colors"
+              className="px-4 py-1.5 rounded-md bg-[#2F6D46] text-white text-sm font-medium hover:bg-[#26593A] transition-colors"
             >
               Sign in
             </button>
@@ -69,7 +69,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD7C41]"
+                className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2F6D46]"
               />
               <input
                 type="password"
@@ -78,13 +78,13 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD7C41]"
+                className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2F6D46]"
               />
               {error && <p className="text-xs text-red-600">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 rounded-md bg-[#FD7C41] text-white text-sm font-medium hover:bg-[#e86d34] transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-md bg-[#2F6D46] text-white text-sm font-medium hover:bg-[#26593A] transition-colors disabled:opacity-50"
               >
                 {loading ? 'One moment…' : mode === 'login' ? 'Log in' : 'Sign up'}
               </button>
@@ -94,7 +94,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
                 setMode(mode === 'login' ? 'signup' : 'login');
                 setError(null);
               }}
-              className="text-xs text-neutral-500 hover:text-[#FD7C41] mt-3 underline"
+              className="text-xs text-neutral-500 hover:text-[#2F6D46] mt-3 underline"
             >
               {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>

@@ -120,9 +120,9 @@ export default function HolidaysPanel({
                       autoFocus
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      className="flex-1 border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#FD7C41]"
+                      className="flex-1 border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#2F6D46]"
                     />
-                    <button onClick={() => rename(h.month, h.day)} className="text-xs text-[#FD7C41]">
+                    <button onClick={() => rename(h.month, h.day)} className="text-xs text-[#2F6D46]">
                       Save
                     </button>
                     <button onClick={() => setRenaming(null)} className="text-xs text-neutral-400">
@@ -137,7 +137,7 @@ export default function HolidaysPanel({
                         setRenaming(key);
                         setRenameValue(h.name);
                       }}
-                      className="text-xs text-neutral-400 hover:text-[#FD7C41]"
+                      className="text-xs text-neutral-400 hover:text-[#2F6D46]"
                     >
                       Rename
                     </button>
@@ -157,18 +157,18 @@ export default function HolidaysPanel({
             type="date"
             value={newDate}
             onChange={(e) => setNewDate(e.target.value)}
-            className="border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
+            className="border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#2F6D46]"
           />
           <input
             placeholder="Name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="flex-1 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD7C41]"
+            className="flex-1 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#2F6D46]"
           />
           <button
             onClick={addLocal}
             disabled={!newDate || !newName.trim()}
-            className="text-xs px-3 py-1.5 rounded-md bg-[#FD7C41] text-white font-medium disabled:opacity-50"
+            className="text-xs px-3 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50"
           >
             Add
           </button>

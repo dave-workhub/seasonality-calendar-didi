@@ -73,7 +73,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   <span className="flex-1 truncate">
                     {r.email} → <span className="font-medium">{CITY_NAME[r.city_slug] ?? r.city_slug}</span>
                   </span>
-                  <button onClick={() => decide(r.id, 'approved')} className="text-xs px-2 py-1 rounded bg-[#FD7C41] text-white font-medium">
+                  <button onClick={() => decide(r.id, 'approved')} className="text-xs px-2 py-1 rounded bg-[#2F6D46] text-white font-medium">
                     Approve
                   </button>
                   <button onClick={() => decide(r.id, 'rejected')} className="text-xs px-2 py-1 rounded border border-neutral-200 text-neutral-600">

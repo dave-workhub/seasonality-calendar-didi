@@ -20,7 +20,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Context Calendar",
+  title: "Seasonality Calendar",
   description: "Holidays, events, and payroll by city",
 };
 
