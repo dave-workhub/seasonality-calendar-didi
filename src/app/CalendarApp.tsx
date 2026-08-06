@@ -435,10 +435,17 @@ export default function CalendarApp() {
 
   if (!resolved) return null;
 
+  // The burn sidebar (admin-only) adds ~226px alongside the grid. Widening
+  // the page container when it's open — instead of letting the sidebar eat
+  // into the grid's existing width — keeps month cards at their normal
+  // size, avoiding the clipped-last-row bug that showed up when the grid
+  // was squeezed below the size its font/padding floors need.
+  const containerMaxW = showBurn ? 'max-w-[1720px]' : 'max-w-[1500px]';
+
   return (
     <>
     <div className="w-full min-h-screen bg-white text-neutral-900 flex flex-col">
-    <div ref={headerRef} className="max-w-[1500px] mx-auto w-full px-8 lg:px-14 pt-6">
+    <div ref={headerRef} className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 pt-6`}>
       <div className="flex items-start justify-between gap-6 mb-2">
         <div>
           <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
@@ -579,7 +586,7 @@ export default function CalendarApp() {
     </div>
 
     <div className="flex-1 flex flex-col justify-center">
-    <div className="max-w-[1500px] mx-auto w-full px-8 lg:px-14 py-6">
+    <div className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
       <div className="flex gap-4 items-start">
       <div className="flex-1 min-w-0">
       <div ref={gridWrapRef}
