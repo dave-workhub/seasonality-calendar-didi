@@ -139,6 +139,9 @@ export default function CalendarApp() {
   const [showBurn, setShowBurn] = useState(false);
   const [editModeOn, setEditModeOn] = useState(false);
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
+  // Which half of the year is showing when the burn sidebar is open and the
+  // grid is paginated to 6 months instead of all 12. 0 = Jan-Jun, 1 = Jul-Dec.
+  const [monthPage, setMonthPage] = useState<0 | 1>(0);
 
   const canEdit = cityAccess === 'admin' || cityAccess === 'approved';
 
@@ -220,8 +223,9 @@ export default function CalendarApp() {
 
     function recompute() {
       const width = window.innerWidth;
-      const c = width < 640 ? 2 : width < 1024 ? 3 : width < 1280 ? 4 : 6;
-      const rows = Math.ceil(12 / c);
+      const monthsShown = burnSidebarOpen ? 6 : 12;
+      const c = Math.min(width < 640 ? 2 : width < 1024 ? 3 : width < 1280 ? 4 : 6, monthsShown);
+      const rows = Math.ceil(monthsShown / c);
 
       // Measured from contentAreaRef (the page container), not gridWrapRef
       // itself — the grid no longer shrinks to fit (it's shrink-0), so
@@ -501,7 +505,10 @@ export default function CalendarApp() {
             <button
               aria-label="Previous year"
               className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#2F6D46] transition-colors"
-              onClick={() => setYear((y) => y - 1)}
+              onClick={() => {
+                setYear((y) => y - 1);
+                setMonthPage(0);
+              }}
             >
               ‹
             </button>
@@ -509,7 +516,10 @@ export default function CalendarApp() {
             <button
               aria-label="Next year"
               className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#2F6D46] transition-colors"
-              onClick={() => setYear((y) => y + 1)}
+              onClick={() => {
+                setYear((y) => y + 1);
+                setMonthPage(0);
+              }}
             >
               ›
             </button>
@@ -600,23 +610,47 @@ export default function CalendarApp() {
     <div ref={contentAreaRef} className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
       <div className="flex gap-4 items-start overflow-x-auto">
       <div className="shrink-0">
+      {burnSidebarOpen && (
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <button
+            aria-label="Show January–June"
+            disabled={monthPage === 0}
+            onClick={() => setMonthPage(0)}
+            className="text-neutral-400 hover:text-[#2F6D46] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
+          >
+            ‹
+          </button>
+          <span className="text-xs font-medium text-neutral-500">{monthPage === 0 ? 'January – June' : 'July – December'}</span>
+          <button
+            aria-label="Show July–December"
+            disabled={monthPage === 1}
+            onClick={() => setMonthPage(1)}
+            className="text-neutral-400 hover:text-[#2F6D46] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
+          >
+            ›
+          </button>
+        </div>
+      )}
       <div ref={gridWrapRef}
         className="grid justify-center gap-3"
         style={{ gridTemplateColumns: `repeat(${cols}, ${cardSize ?? 100}px)` }}
       >
-        {MONTH_NAMES.map((mn, m) => (
-          <MonthGrid
-            key={m}
-            year={year}
-            month={m}
-            monthName={mn}
-            dayMap={dayMap}
-            onHover={setTooltip}
-            size={cardSize ?? 100}
-            editable={editModeOn}
-            onDayClick={setDayModalDate}
-          />
-        ))}
+        {MONTH_NAMES.map((mn, m) => {
+          if (burnSidebarOpen && (monthPage === 0 ? m >= 6 : m < 6)) return null;
+          return (
+            <MonthGrid
+              key={m}
+              year={year}
+              month={m}
+              monthName={mn}
+              dayMap={dayMap}
+              onHover={setTooltip}
+              size={cardSize ?? 100}
+              editable={editModeOn}
+              onDayClick={setDayModalDate}
+            />
+          );
+        })}
       </div>
 
       <div ref={legendRef} className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mt-3 px-4 py-2 border border-neutral-200 rounded-md bg-neutral-50/60 text-[11px] text-neutral-500">
