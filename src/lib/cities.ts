@@ -23,6 +23,20 @@ const COUNTRY_NAMES: Record<CountryCode, string> = {
   EC: 'Ecuador',
 };
 
+const COUNTRY_CURRENCY: Record<CountryCode, string> = {
+  CO: 'COP',
+  CL: 'CLP',
+  PE: 'PEN',
+  MX: 'MXN',
+  CR: 'CRC',
+  EC: 'USD', // Ecuador uses the US dollar as its official currency
+};
+
+export function currencyForCity(citySlug: string): string | null {
+  const resolved = findCity(citySlug);
+  return resolved ? COUNTRY_CURRENCY[resolved.city.country] : null;
+}
+
 export const ALL_CITIES: City[] = [
   { slug: 'cartagena', name: 'Cartagena', country: 'CO', lat: 10.3910, lon: -75.4794 },
   { slug: 'medellin', name: 'Medellín', country: 'CO', lat: 6.2442, lon: -75.5812 },

@@ -9,6 +9,7 @@ import AuthModal from './AuthModal';
 import HolidaysPanel from './EditPanel';
 import DayEventModal from './DayEventModal';
 import AdminPanel from './AdminPanel';
+import BurnPanel from './BurnPanel';
 
 export interface Profile {
   id: string;
@@ -131,6 +132,7 @@ export default function CalendarApp() {
   const [showAuth, setShowAuth] = useState(false);
   const [showHolidays, setShowHolidays] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showBurn, setShowBurn] = useState(false);
   const [editModeOn, setEditModeOn] = useState(false);
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
 
@@ -424,6 +426,7 @@ export default function CalendarApp() {
     await supabase.auth.signOut();
     setShowHolidays(false);
     setShowAdmin(false);
+    setShowBurn(false);
     setEditModeOn(false);
   }
 
@@ -494,12 +497,20 @@ export default function CalendarApp() {
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
         {profile?.is_admin && (
-          <button
-            onClick={() => setShowAdmin(true)}
-            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
-          >
-            Admin
-          </button>
+          <>
+            <button
+              onClick={() => setShowAdmin(true)}
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+            >
+              Admin
+            </button>
+            <button
+              onClick={() => setShowBurn(true)}
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+            >
+              Burn
+            </button>
+          </>
         )}
 
         {canEdit && (
@@ -644,6 +655,8 @@ export default function CalendarApp() {
     )}
 
     {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+
+    {showBurn && <BurnPanel onClose={() => setShowBurn(false)} />}
     </>
   );
 }

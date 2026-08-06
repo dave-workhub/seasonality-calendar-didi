@@ -250,6 +250,25 @@ export function isoWeek(dt: Date): number {
   return Math.ceil(((d.getTime() - y1.getTime()) / 86400000 + 1) / 7);
 }
 
+/** Monday of a given ISO week/year — inverse of isoWeek(). Jan 4 always falls in week 1. */
+export function isoWeekMonday(year: number, week: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const jan4Dow = jan4.getDay() || 7; // Monday=1..Sunday=7
+  const week1Monday = new Date(year, 0, 4 - (jan4Dow - 1));
+  return new Date(week1Monday.getFullYear(), week1Monday.getMonth(), week1Monday.getDate() + (week - 1) * 7);
+}
+
+const SHORT_MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Aug 3–9" or "Jul 28–Aug 3" if the week crosses a month boundary. */
+export function isoWeekLabel(year: number, week: number): string {
+  const start = isoWeekMonday(year, week);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  const s = `${SHORT_MONTH[start.getMonth()]} ${start.getDate()}`;
+  const e = start.getMonth() === end.getMonth() ? `${end.getDate()}` : `${SHORT_MONTH[end.getMonth()]} ${end.getDate()}`;
+  return `${s}–${e}`;
+}
+
 /* ── Payroll: last working day of month = paycheck ── */
 export function getPaycheckDates(y: number, holidaySet: Set<string>): Set<string> {
   const out = new Set<string>();

@@ -456,3 +456,30 @@ create policy "public read rain_daily" on rain_daily for select using (true);
 
 -- No public write policy: only the cron job (via the service_role key, which
 -- bypasses RLS) writes to this table.
+
+-- ══════════════════════════════════════════════════════════════════
+-- Weekly B-burn (driver) / C-burn (passenger) — admin-only, imported by
+-- hand from a Google Sheet CSV export via the Burn tab in the app.
+-- ══════════════════════════════════════════════════════════════════
+
+create table if not exists weekly_burn (
+  id bigint generated always as identity primary key,
+  city_slug text not null,
+  iso_year int not null,
+  iso_week int not null,
+  b_burn_pct numeric,
+  b_burn_nominal numeric,
+  c_burn_pct numeric,
+  c_burn_nominal numeric,
+  currency text not null, -- e.g. COP, MXN — set by the importer from the city's country
+  updated_at timestamptz not null default now(),
+  unique (city_slug, iso_year, iso_week)
+);
+
+alter table weekly_burn enable row level security;
+
+-- Admin-only, both read and write. No public policy — signed-out/non-admin
+-- users get nothing back at all, not even a permissions error.
+drop policy if exists "admin only weekly_burn" on weekly_burn;
+create policy "admin only weekly_burn" on weekly_burn
+  for all using (is_admin()) with check (is_admin());
