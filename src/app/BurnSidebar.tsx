@@ -420,6 +420,10 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
         return;
       }
 
+      const b = num(bPct);
+      const c = num(cPct);
+      if (b === null && c === null) continue; // blank row (e.g. a future week not filled in yet) — skip rather than create an empty entry
+
       // Nominal is deliberately never set here — only % comes from this
       // file, so any nominal value already on the row (typed in by hand)
       // is left alone.
@@ -427,8 +431,8 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
         city_slug: citySlug,
         iso_year: year,
         iso_week: week,
-        b_burn_pct: num(bPct),
-        c_burn_pct: num(cPct),
+        b_burn_pct: b,
+        c_burn_pct: c,
         currency: currencyForCity(citySlug) ?? 'USD',
       });
     }
@@ -577,13 +581,19 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     load();
   }
 
+  // Weeks up through the current one, most recent first (rows is already
+  // sorted that way) — keeps a sheet that has blank placeholder rows for
+  // future weeks (e.g. through week 51) from pushing the "recent weeks"
+  // list and sparkline out to weeks that haven't happened yet.
+  const pastRows = rows.filter((r) => r.iso_year < currentYear || (r.iso_year === currentYear && r.iso_week <= currentWeek));
+
   const weekOptions = rows.map((r) => ({ key: weekKey(r.iso_year, r.iso_week), label: `Week ${r.iso_week} · ${r.iso_year}` }));
   const weekA = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekAKey) ?? null;
   const weekB = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekBKey) ?? null;
 
   const burnUploadedAt = rows.length > 0 ? rows.reduce((max, r) => (r.updated_at > max ? r.updated_at : max), rows[0].updated_at) : null;
-  // Sparkline wants oldest-to-newest, left to right — rows are fetched newest-first.
-  const sparkPoints = [...rows.slice(0, 8)].reverse().map((r) => ({ b: r.b_burn_pct, c: r.c_burn_pct }));
+  // Sparkline wants oldest-to-newest, left to right — pastRows is newest-first.
+  const sparkPoints = [...pastRows.slice(0, 8)].reverse().map((r) => ({ b: r.b_burn_pct, c: r.c_burn_pct }));
 
   return (
     <div className="w-[210px] shrink-0 border-l border-neutral-200 pl-4">
@@ -831,9 +841,9 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          {rows.slice(0, 10).map((r, i) => {
+          {pastRows.slice(0, 8).map((r, i) => {
             const isCurrent = r.iso_year === currentYear && r.iso_week === currentWeek;
-            const prior = rows[i + 1] ?? null;
+            const prior = pastRows[i + 1] ?? null;
             const bDelta = prior ? ppDelta(r.b_burn_pct, prior.b_burn_pct) : null;
             const cDelta = prior ? ppDelta(r.c_burn_pct, prior.c_burn_pct) : null;
             return (
