@@ -20,8 +20,12 @@ interface BurnRow {
 }
 
 // Expected header cells, case/space-insensitive, in this column order:
-// Year | Week | City | B Burn % | B Burn Nominal | C Burn % | C Burn Nominal
-const EXPECTED_HEADERS = ['year', 'week', 'city', 'bburn%', 'bburnnominal', 'cburn%', 'cburnnominal'];
+// Year | Week | B Burn | C Burn — just the percentages. No city column,
+// since each city gets its own sheet tab / CSV, and the upload is already
+// scoped to whichever city is selected in the sidebar. Never touches
+// nominal — that's only ever set via the manual edit form, so a re-upload
+// here can't silently wipe out a value you typed in by hand.
+const EXPECTED_HEADERS = ['year', 'week', 'bburn', 'cburn'];
 
 function normalizeHeader(h: string) {
   return h.trim().toLowerCase().replace(/[\s_]+/g, '');
@@ -217,17 +221,21 @@ async function upsertRespectingLocks(
       iso_week: cand.iso_week,
       currency: cand.currency,
     };
+    // % and nominal are included independently, not as a pair — a candidate
+    // that only supplies b_burn_pct (like the plain weekly % import) must
+    // leave b_burn_nominal out of the upsert entirely so whatever's already
+    // there (e.g. typed in by hand) survives untouched, not reset to null.
     if (lock?.b) {
       skippedB++;
-    } else if (cand.b_burn_pct !== undefined || cand.b_burn_nominal !== undefined) {
-      payload.b_burn_pct = cand.b_burn_pct ?? null;
-      payload.b_burn_nominal = cand.b_burn_nominal ?? null;
+    } else {
+      if (cand.b_burn_pct !== undefined) payload.b_burn_pct = cand.b_burn_pct;
+      if (cand.b_burn_nominal !== undefined) payload.b_burn_nominal = cand.b_burn_nominal;
     }
     if (lock?.c) {
       skippedC++;
-    } else if (cand.c_burn_pct !== undefined || cand.c_burn_nominal !== undefined) {
-      payload.c_burn_pct = cand.c_burn_pct ?? null;
-      payload.c_burn_nominal = cand.c_burn_nominal ?? null;
+    } else {
+      if (cand.c_burn_pct !== undefined) payload.c_burn_pct = cand.c_burn_pct;
+      if (cand.c_burn_nominal !== undefined) payload.c_burn_nominal = cand.c_burn_nominal;
     }
     // One upsert per row (not a batch) since the column set genuinely
     // varies row to row depending on what's locked.
@@ -395,7 +403,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     const header = splitLine(lines[0]).map(normalizeHeader);
     const headerOk = EXPECTED_HEADERS.every((h, i) => header[i] === h);
     if (!headerOk) {
-      setError('Header row must be: Year, Week, City, B Burn %, B Burn Nominal, C Burn %, C Burn Nominal');
+      setError('Header row must be: Year, Week, B Burn, C Burn');
       return;
     }
 
@@ -403,25 +411,25 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
 
     for (let i = 1; i < lines.length; i++) {
       const cells = splitLine(lines[i]);
-      const [yearStr, weekStr, city, bPct, bNom, cPct, cNom] = cells;
+      const [yearStr, weekStr, bPct, cPct] = cells;
       const year = num(yearStr);
       const week = num(weekStr);
-      const slug = (city ?? '').trim().toLowerCase();
 
-      if (!year || !week || !slug) {
-        setError(`Row ${i + 1}: missing year, week, or city.`);
+      if (!year || !week) {
+        setError(`Row ${i + 1}: missing year or week.`);
         return;
       }
 
+      // Nominal is deliberately never set here — only % comes from this
+      // file, so any nominal value already on the row (typed in by hand)
+      // is left alone.
       payload.push({
-        city_slug: slug,
+        city_slug: citySlug,
         iso_year: year,
         iso_week: week,
         b_burn_pct: num(bPct),
-        b_burn_nominal: num(bNom),
         c_burn_pct: num(cPct),
-        c_burn_nominal: num(cNom),
-        currency: currencyForCity(slug) ?? 'USD',
+        currency: currencyForCity(citySlug) ?? 'USD',
       });
     }
 
