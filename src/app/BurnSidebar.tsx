@@ -587,6 +587,30 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   // list and sparkline out to weeks that haven't happened yet.
   const pastRows = rows.filter((r) => r.iso_year < currentYear || (r.iso_year === currentYear && r.iso_week <= currentWeek));
 
+  // The importer skips blank rows now, so the in-progress current week
+  // (its data isn't in yet — the week isn't over) never becomes a real DB
+  // row. Show it anyway as an empty placeholder rather than silently
+  // skipping straight to last week, so it's clear data is just pending.
+  const hasCurrentWeek = pastRows[0]?.iso_year === currentYear && pastRows[0]?.iso_week === currentWeek;
+  const displayRows: BurnRow[] = hasCurrentWeek
+    ? pastRows
+    : [
+        {
+          id: -1,
+          iso_year: currentYear,
+          iso_week: currentWeek,
+          b_burn_pct: null,
+          b_burn_nominal: null,
+          c_burn_pct: null,
+          c_burn_nominal: null,
+          b_locked: false,
+          c_locked: false,
+          currency: currencyForCity(citySlug) ?? 'USD',
+          updated_at: '',
+        },
+        ...pastRows,
+      ];
+
   const weekOptions = rows.map((r) => ({ key: weekKey(r.iso_year, r.iso_week), label: `Week ${r.iso_week} · ${r.iso_year}` }));
   const weekA = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekAKey) ?? null;
   const weekB = rows.find((r) => weekKey(r.iso_year, r.iso_week) === weekBKey) ?? null;
@@ -841,9 +865,9 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          {pastRows.slice(0, 8).map((r, i) => {
+          {displayRows.slice(0, 8).map((r, i) => {
             const isCurrent = r.iso_year === currentYear && r.iso_week === currentWeek;
-            const prior = pastRows[i + 1] ?? null;
+            const prior = displayRows[i + 1] ?? null;
             const bDelta = prior ? ppDelta(r.b_burn_pct, prior.b_burn_pct) : null;
             const cDelta = prior ? ppDelta(r.c_burn_pct, prior.c_burn_pct) : null;
             return (
