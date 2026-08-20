@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabaseClient';
-import { currencyForCity } from '@/lib/cities';
+import { ALL_CITIES, currencyForCity } from '@/lib/cities';
 import { isoWeek, isoWeekLabel, isoYear } from '@/lib/holidays';
 
 interface BurnRow {
@@ -81,6 +82,48 @@ function num(v: string): number | null {
 function fmtNum(n: number | null) {
   if (n === null) return '—';
   return n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toString();
+}
+
+// Strips accents so "Medellín" / "Medellin" both match, lowercases, and
+// drops spaces — for matching a workbook tab name against a city.
+function foldName(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
+// Matches a sheet tab name (e.g. "Medellin", "cartagena", "Data", "Cities")
+// against a known city — returns null for tabs that aren't a city at all
+// (reference/notes tabs), so those are silently skipped rather than erroring.
+function matchCitySlug(sheetName: string): string | null {
+  const folded = foldName(sheetName);
+  const match = ALL_CITIES.find((c) => foldName(c.slug) === folded || foldName(c.name) === folded);
+  return match?.slug ?? null;
+}
+
+// Same header/row validation as the plain-CSV path, but operating on rows
+// already split into cells (from XLSX.utils.sheet_to_json) instead of raw
+// text lines — a workbook tab and a CSV file end up parsed the same way.
+function parseSheetRows(rows: string[][]): { candidates: { iso_year: number; iso_week: number; b_burn_pct: number | null; c_burn_pct: number | null }[]; error: string | null } {
+  if (rows.length < 2) return { candidates: [], error: 'no data rows' };
+  const header = rows[0].map(normalizeHeader);
+  const headerOk = EXPECTED_HEADERS.every((h, i) => header[i] === h);
+  if (!headerOk) return { candidates: [], error: `header must be Year, Week, B Burn, C Burn (found: ${rows[0].join(', ')})` };
+
+  const candidates: { iso_year: number; iso_week: number; b_burn_pct: number | null; c_burn_pct: number | null }[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const [yearStr, weekStr, bPct, cPct] = rows[i];
+    const year = num(yearStr);
+    const week = num(weekStr);
+    if (!year || !week) continue; // blank trailing row
+    const b = num(bPct);
+    const c = num(cPct);
+    if (b === null && c === null) continue; // future week, not filled in yet
+    candidates.push({ iso_year: year, iso_week: week, b_burn_pct: b, c_burn_pct: c });
+  }
+  return { candidates, error: null };
 }
 
 interface RawRow {
@@ -335,6 +378,10 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
   const [rawError, setRawError] = useState<string | null>(null);
   const [rawStatus, setRawStatus] = useState<string | null>(null);
 
+  const [xlsxBusy, setXlsxBusy] = useState(false);
+  const [xlsxError, setXlsxError] = useState<string | null>(null);
+  const [xlsxStatus, setXlsxStatus] = useState<string | null>(null);
+
   // Manual edit form — null id means "adding a new week", otherwise editing
   // the row with that id. Locking here always wins over whatever's in the
   // DB already (the user is explicitly setting the value right now), unlike
@@ -517,6 +564,73 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
     load();
   }
 
+  function handleXlsxFile(file: File) {
+    setXlsxError(null);
+    setXlsxStatus(null);
+    setXlsxBusy(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const buf = reader.result as ArrayBuffer;
+        const workbook = XLSX.read(buf, { type: 'array' });
+
+        const payload: BurnCandidate[] = [];
+        const matchedCities: string[] = [];
+        const skippedTabs: string[] = [];
+        const badTabs: string[] = [];
+
+        for (const sheetName of workbook.SheetNames) {
+          const slug = matchCitySlug(sheetName);
+          if (!slug) {
+            skippedTabs.push(sheetName);
+            continue;
+          }
+          const sheet = workbook.Sheets[sheetName];
+          // raw:false forces formatted display strings (e.g. "3.40%")
+          // rather than the underlying fraction (0.034) a percent-formatted
+          // Excel cell actually stores — keeps this on the same "%" text
+          // parsing as every other import path.
+          const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+          const { candidates, error: sheetErr } = parseSheetRows(rows);
+          if (sheetErr) {
+            badTabs.push(`${sheetName} (${sheetErr})`);
+            continue;
+          }
+          matchedCities.push(sheetName);
+          const currency = currencyForCity(slug) ?? 'USD';
+          for (const c of candidates) {
+            payload.push({ city_slug: slug, iso_year: c.iso_year, iso_week: c.iso_week, b_burn_pct: c.b_burn_pct, c_burn_pct: c.c_burn_pct, currency });
+          }
+        }
+
+        if (payload.length === 0) {
+          setXlsxError(badTabs.length > 0 ? `Couldn't read any city tabs — ${badTabs.join('; ')}` : 'No matching city tabs found in this file.');
+          setXlsxBusy(false);
+          return;
+        }
+
+        const result = await upsertRespectingLocks(payload);
+        setXlsxBusy(false);
+        if (result.error) {
+          setXlsxError(result.error);
+          return;
+        }
+        const skipped = result.skippedB + result.skippedC > 0 ? ` (${result.skippedB + result.skippedC} locked side${result.skippedB + result.skippedC === 1 ? '' : 's'} left untouched)` : '';
+        const ignored = skippedTabs.length > 0 ? ` Ignored non-city tabs: ${skippedTabs.join(', ')}.` : '';
+        setXlsxStatus(`Updated ${matchedCities.length} cit${matchedCities.length === 1 ? 'y' : 'ies'} (${result.written} week rows).${skipped}${ignored}`);
+        load();
+      } catch (err) {
+        setXlsxBusy(false);
+        setXlsxError(err instanceof Error ? err.message : "Couldn't read that file.");
+      }
+    };
+    reader.onerror = () => {
+      setXlsxBusy(false);
+      setXlsxError("Couldn't read that file.");
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   function openManualNew() {
     setManualEditingId(null);
     setManualYear(String(currentYear));
@@ -640,6 +754,30 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           </label>
         )}
       </div>
+
+      {canUpload && (
+        <div className="mb-3">
+          <label
+            className={`text-[10px] px-2 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium cursor-pointer inline-block ${xlsxBusy ? 'opacity-50 pointer-events-none' : ''}`}
+          >
+            {xlsxBusy ? 'Reading file…' : 'Upload weekly XLSX (all cities)'}
+            <input
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              disabled={xlsxBusy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleXlsxFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <p className="text-[9px] text-neutral-400 mt-1 mb-0">One tab per city (Year, Week, B Burn, C Burn) — updates every matching city at once.</p>
+          {xlsxStatus && <p className="text-[9px] text-[#2F6D46] mt-1 mb-0">{xlsxStatus}</p>}
+          {xlsxError && <p className="text-[9px] text-red-600 mt-1 mb-0">{xlsxError}</p>}
+        </div>
+      )}
 
       {canUpload && (
         <button onClick={() => setShowRawImport((v) => !v)} className="text-[10px] text-[#2F6D46] underline mb-2 block">
