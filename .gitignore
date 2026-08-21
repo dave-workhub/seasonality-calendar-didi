@@ -42,3 +42,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Google OAuth credential JSON downloads (never commit real secrets)
+client_secret_*.json
