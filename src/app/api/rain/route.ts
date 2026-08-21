@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseConfigured } from '@/lib/supabaseClient';
+import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { getAuthorizedDidilabsEmail } from '@/lib/serverAuth';
 
 export interface RainDay {
-  date: string; // YYYY-MM-DD
+  date: string;
   forecast_precip_mm: number | null;
   forecast_pop: number | null;
   actual_precip_mm: number | null;
-  forecast_temp_max: number | null; // °C
-  actual_temp_max: number | null; // °C
+  forecast_temp_max: number | null;
+  actual_temp_max: number | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -18,11 +19,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'city and year are required' }, { status: 400 });
   }
 
-  if (!supabaseConfigured || !supabase) {
+  if (!supabaseAdminConfigured || !supabaseAdmin) {
     return NextResponse.json({ days: [], configured: false });
   }
 
-  const { data, error } = await supabase
+  const authorizedEmail = await getAuthorizedDidilabsEmail(req);
+  if (!authorizedEmail) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  const { data, error } = await supabaseAdmin
     .from('rain_daily')
     .select('date, forecast_precip_mm, forecast_pop, actual_precip_mm, forecast_temp_max, actual_temp_max')
     .eq('city_slug', city)

@@ -19,6 +19,16 @@ export interface Profile {
 
 export type CityAccess = 'loading' | 'signed-out' | 'none' | 'pending' | 'approved' | 'rejected' | 'admin';
 
+// Viewing the calendar at all is restricted to @didi-labs.com accounts, plus
+// this one personal-account fallback (also the hardcoded admin bootstrap
+// email in the DB trigger) so there's always a way in if Google OAuth is
+// ever misconfigured. Kept in sync with the `handle_new_user()` trigger.
+const ADMIN_FALLBACK_EMAIL = 'dalmac948@gmail.com';
+function isDidilabsViewer(email?: string | null): boolean {
+  if (!email) return false;
+  return email.toLowerCase().endsWith('@didi-labs.com') || email.toLowerCase() === ADMIN_FALLBACK_EMAIL;
+}
+
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -131,9 +141,10 @@ export default function CalendarApp() {
   const refreshData = () => setDataVersion((v) => v + 1);
 
   const [session, setSession] = useState<Session | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [unauthorizedEmail, setUnauthorizedEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cityAccess, setCityAccess] = useState<CityAccess>('signed-out');
-  const [showAuth, setShowAuth] = useState(false);
   const [showHolidays, setShowHolidays] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showBurn, setShowBurn] = useState(false);
@@ -147,11 +158,33 @@ export default function CalendarApp() {
 
   // Track auth session.
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    if (!supabase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time bail when Supabase isn't configured
+      setSessionChecked(true);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setSessionChecked(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      setSessionChecked(true);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // The Google OAuth `hd` param is only a UI hint -- it doesn't actually
+  // block other domains from completing sign-in. Enforce the real boundary
+  // here: any session that resolves to a non-@didi-labs.com (and non-admin
+  // fallback) email gets signed out immediately.
+  useEffect(() => {
+    if (!supabase || !session) return;
+    if (!isDidilabsViewer(session.user.email)) {
+      const rejectedEmail = session.user.email ?? null;
+      supabase.auth.signOut().then(() => setUnauthorizedEmail(rejectedEmail));
+    }
+  }, [session]);
 
   // Load the signed-in user's profile (admin flag).
   useEffect(() => {
@@ -302,12 +335,17 @@ export default function CalendarApp() {
 
   const resolved = findCity(citySlug);
 
+  // These three fetches hit server routes gated by @didi-labs.com access --
+  // they need the signed-in user's access token forwarded so the route can
+  // verify it server-side (a bare fetch carries no Supabase session).
+  const authHeaders = session ? { Authorization: `Bearer ${session.access_token}` } : undefined;
+
   useEffect(() => {
-    if (!findCity(citySlug)) return;
+    if (!findCity(citySlug) || !session || !isDidilabsViewer(session.user.email)) return;
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- standard fetch-on-param-change pattern
     setLoading(true);
-    fetch(`/api/calendar-events?city=${citySlug}&year=${year}`)
+    fetch(`/api/calendar-events?city=${citySlug}&year=${year}`, { headers: authHeaders })
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) setEvents(data.events ?? []);
@@ -321,13 +359,14 @@ export default function CalendarApp() {
     return () => {
       cancelled = true;
     };
-  }, [citySlug, year, dataVersion]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- authHeaders is derived fresh from session each render
+  }, [citySlug, year, dataVersion, session]);
 
   useEffect(() => {
     const city = findCity(citySlug);
-    if (!city) return;
+    if (!city || !session || !isDidilabsViewer(session.user.email)) return;
     let cancelled = false;
-    fetch(`/api/holidays?country=${city.city.country}&year=${year}&city=${citySlug}`)
+    fetch(`/api/holidays?country=${city.city.country}&year=${year}&city=${citySlug}`, { headers: authHeaders })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -343,12 +382,13 @@ export default function CalendarApp() {
     return () => {
       cancelled = true;
     };
-  }, [citySlug, year, dataVersion]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- authHeaders is derived fresh from session each render
+  }, [citySlug, year, dataVersion, session]);
 
   useEffect(() => {
-    if (!findCity(citySlug)) return;
+    if (!findCity(citySlug) || !session || !isDidilabsViewer(session.user.email)) return;
     let cancelled = false;
-    fetch(`/api/rain?city=${citySlug}&year=${year}`)
+    fetch(`/api/rain?city=${citySlug}&year=${year}`, { headers: authHeaders })
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) setRainDays(data.days ?? []);
@@ -359,7 +399,8 @@ export default function CalendarApp() {
     return () => {
       cancelled = true;
     };
-  }, [citySlug, year, dataVersion]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- authHeaders is derived fresh from session each render
+  }, [citySlug, year, dataVersion, session]);
 
   const dayMap = useMemo(() => {
     if (!resolved) return new Map<string, DayInfo>();
@@ -455,6 +496,30 @@ export default function CalendarApp() {
   }
 
   if (!resolved) return null;
+
+  // Full-page access gate: viewing anything below requires a signed-in
+  // @didi-labs.com (or admin fallback) account. Nothing calendar-related
+  // renders until this resolves.
+  if (!sessionChecked) {
+    return <div className="w-full min-h-screen bg-white" />;
+  }
+  if (!session || !isDidilabsViewer(session.user.email)) {
+    return (
+      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center p-4 gap-4">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-neutral-900">Seasonality Calendar</h1>
+          <p className="text-sm text-neutral-500 mt-1">Restricted to @didi-labs.com accounts.</p>
+        </div>
+        {unauthorizedEmail && (
+          <p className="text-xs text-red-600 max-w-sm text-center">
+            Signed in as {unauthorizedEmail}, which isn&apos;t a @didi-labs.com account -- signed out. Please try
+            again with a @didi-labs.com Google account.
+          </p>
+        )}
+        <AuthModal inline />
+      </div>
+    );
+  }
 
   // The burn sidebar (admin-only) adds extra width alongside the grid.
   // Widening the page container when it's open gives that extra width room
@@ -590,21 +655,13 @@ export default function CalendarApp() {
           </span>
         ) : null}
 
-        {session ? (
-          <span className="flex items-center gap-1.5 text-neutral-400">
-            {session.user.email}
-            <button onClick={signOut} className="underline hover:text-[#2F6D46]">
-              Sign out
-            </button>
-          </span>
-        ) : (
-          <>
-            <span className="text-neutral-400">Want to edit this calendar?</span>
-            <button onClick={() => setShowAuth(true)} className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors">
-              Sign in and request access
-            </button>
-          </>
-        )}
+        {/* session is always present here -- the whole page is gated behind sign-in above */}
+        <span className="flex items-center gap-1.5 text-neutral-400">
+          {session.user.email}
+          <button onClick={signOut} className="underline hover:text-[#2F6D46]">
+            Sign out
+          </button>
+        </span>
         </div>
         </div>
       </div>
@@ -696,8 +753,6 @@ export default function CalendarApp() {
     </div>
     </div>
     </div>
-
-    {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
     {showHolidays && resolved && (
       <HolidaysPanel

@@ -501,3 +501,91 @@ create policy "admin update weekly_burn" on weekly_burn
 drop policy if exists "admin delete weekly_burn" on weekly_burn;
 create policy "admin delete weekly_burn" on weekly_burn
   for delete using (is_admin());
+
+-- ══════════════════════════════════════════════════════════════════
+-- @didi-labs.com domain gate: restrict viewing to @didi-labs.com (or the
+-- admin fallback account), auto-approve city-edit requests from
+-- @didi-labs.com users instead of needing manual admin review.
+-- ══════════════════════════════════════════════════════════════════
+
+-- 1. Does the current signed-in user have a @didi-labs.com email?
+create or replace function is_didilabs_user() returns boolean
+language sql security definer stable as $$
+  select coalesce(
+    (select email from auth.users where id = auth.uid()) ilike '%@didi-labs.com',
+    false
+  );
+$$;
+
+-- 2. Auto-admin on signup now covers the DiDi work email too (not just the
+-- original personal-account bootstrap email).
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, email, is_admin)
+  values (new.id, new.email, new.email in ('dalmac948@gmail.com', 'davidmartinez@didi-labs.com'));
+  return new;
+end;
+$$;
+
+-- 3. Backfill admin status in case davidmartinez@didi-labs.com already has
+-- an auth.users row from some earlier sign-in attempt (harmless no-op if not).
+insert into public.profiles (id, email, is_admin)
+select id, email, true from auth.users where email = 'davidmartinez@didi-labs.com'
+on conflict (id) do update set is_admin = true;
+
+-- 4. Viewing the four "content" tables now requires admin or a didi-labs.com
+-- account, replacing the earlier fully-public policies.
+drop policy if exists "public read calendar_events" on calendar_events;
+create policy "didilabs read calendar_events" on calendar_events
+  for select using (is_admin() or is_didilabs_user());
+
+drop policy if exists "public read rain_daily" on rain_daily;
+create policy "didilabs read rain_daily" on rain_daily
+  for select using (is_admin() or is_didilabs_user());
+
+drop policy if exists "public read weekly_burn" on weekly_burn;
+create policy "didilabs read weekly_burn" on weekly_burn
+  for select using (is_admin() or is_didilabs_user());
+
+drop policy if exists "public read holiday_overrides" on holiday_overrides;
+create policy "didilabs read holiday_overrides" on holiday_overrides
+  for select using (is_admin() or is_didilabs_user());
+
+-- 5. Auto-approve a city-access request the moment a @didi-labs.com user
+-- makes it (insert or a rejected-then-re-requested update), instead of
+-- sitting in "pending" for manual admin review.
+create or replace function auto_approve_didilabs() returns trigger
+language plpgsql security definer as $$
+begin
+  if is_didilabs_user() and new.status = 'pending' then
+    new.status := 'approved';
+    new.decided_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_city_permission_request on city_permissions;
+create trigger on_city_permission_request
+  before insert or update on city_permissions
+  for each row execute function auto_approve_didilabs();
+
+-- The insert/update policies' WITH CHECK clauses required status='pending'
+-- at insert time — but the trigger above flips it to 'approved' before the
+-- row is actually checked, so they need to allow that specific case too
+-- (only for genuine didi-labs.com users, closing the obvious self-approval
+-- loophole for anyone else).
+drop policy if exists "request access to a city" on city_permissions;
+create policy "request access to a city" on city_permissions
+  for insert with check (
+    auth.uid() = user_id and (status = 'pending' or (status = 'approved' and is_didilabs_user()))
+  );
+
+drop policy if exists "user re-requests after rejection" on city_permissions;
+create policy "user re-requests after rejection" on city_permissions
+  for update using (auth.uid() = user_id and status = 'rejected')
+  with check (
+    auth.uid() = user_id and (status = 'pending' or (status = 'approved' and is_didilabs_user()))
+  );
+

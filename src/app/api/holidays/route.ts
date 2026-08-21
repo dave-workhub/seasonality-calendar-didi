@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CountryCode } from '@/lib/cities';
 import { getHolidays as getFallbackHolidays, HolidayEntry } from '@/lib/holidays';
-import { supabase, supabaseConfigured } from '@/lib/supabaseClient';
+import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { getAuthorizedDidilabsEmail } from '@/lib/serverAuth';
 
 /**
  * Live public holidays from Nager.Date (date.nager.at) — a free, open-source,
@@ -22,9 +23,9 @@ export const revalidate = 3600; // cache each country/year for 1 hour
 
 /** City-specific corrections: hide a wrong live holiday, rename one, or add a local one Nager.Date doesn't know about. */
 async function applyOverrides(city: string, year: string, holidays: HolidayEntry[]): Promise<HolidayEntry[]> {
-  if (!supabaseConfigured || !supabase) return holidays;
+  if (!supabaseAdminConfigured || !supabaseAdmin) return holidays;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('holiday_overrides')
     .select('override_date, hidden, custom_name')
     .eq('city_slug', city)
@@ -69,6 +70,11 @@ export async function GET(req: NextRequest) {
 
   if (!country || !year) {
     return NextResponse.json({ error: 'country and year are required' }, { status: 400 });
+  }
+
+  const authorizedEmail = await getAuthorizedDidilabsEmail(req);
+  if (!authorizedEmail) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
 
   let holidays: HolidayEntry[];
