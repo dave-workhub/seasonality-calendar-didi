@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { CalendarEvent, Category, EDITABLE_CATEGORIES } from './CalendarApp';
 
@@ -22,29 +22,64 @@ function toISODate(d: Date) {
 const DATE_LABEL_FMT = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export default function DayEventModal({
-  citySlug,
-  cityName,
+  cities,
+  scopeLabel,
   date,
-  events,
   onClose,
   onChanged,
 }: {
-  citySlug: string;
-  cityName: string;
+  cities: { slug: string; name: string }[];
+  scopeLabel: string;
   date: Date;
-  events: CalendarEvent[];
   onClose: () => void;
   onChanged: () => void;
 }) {
   const dateStr = toISODate(date);
-  const touching = events
+  const citySlugs = cities.map((c) => c.slug);
+  const cityNameBySlug = Object.fromEntries(cities.map((c) => [c.slug, c.name]));
+  const multiCity = cities.length > 1;
+
+  const [fetchedEvents, setFetchedEvents] = useState<CalendarEvent[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // Fetch events across every city in scope for the year this date falls in --
+  // decoupled from the parent's per-current-city `events` state so Country/
+  // Indigo scope can see (and edit/delete) events belonging to any city in
+  // the group, not just the one selected in the header dropdown.
+  useEffect(() => {
+    if (!supabase) return;
+    const year = date.getFullYear();
+    let cancelled = false;
+    supabase
+      .from('calendar_events')
+      .select('*')
+      .in('city_slug', citySlugs)
+      .gte('start_date', `${year}-01-01`)
+      .lte('start_date', `${year}-12-31`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setFetchedEvents((data as CalendarEvent[]) ?? []);
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- citySlugs is derived fresh each render from `cities`
+  }, [cities, date]);
+
+  const touching = fetchedEvents
     .filter((ev) => ev.start_date <= dateStr && (ev.end_date ?? ev.start_date) >= dateStr)
     .sort((a, b) => a.start_date.localeCompare(b.start_date));
 
-  const [editingId, setEditingId] = useState<number | 'new' | null>(touching.length === 0 ? 'new' : null);
+  const [editingId, setEditingId] = useState<number | 'new' | null>(null);
   const [form, setForm] = useState({ title: '', category: 'other_event' as Category, start_date: dateStr, end_date: '', source_url: '' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Default straight into "new event" mode once the fetch resolves and there's
+  // nothing on this date yet -- computed at render time (not via an effect)
+  // so there's no cascading setState and no flash of the wrong panel.
+  const effectiveEditingId = editingId ?? (loaded && touching.length === 0 ? 'new' : null);
 
   function startNew() {
     setForm({ title: '', category: 'other_event', start_date: dateStr, end_date: '', source_url: '' });
@@ -68,23 +103,46 @@ export default function DayEventModal({
     if (!supabase) return;
     setBusy(true);
     setError(null);
-    const payload = {
-      city_slug: citySlug,
-      title: form.title,
-      category: form.category,
-      start_date: form.start_date,
-      end_date: form.end_date || null,
-      source_url: form.source_url || null,
-    };
-    const query =
-      editingId === 'new'
-        ? supabase.from('calendar_events').insert(payload)
-        : supabase.from('calendar_events').update(payload).eq('id', editingId);
-    const { error: err } = await query;
-    setBusy(false);
-    if (err) {
-      setError(err.message);
-      return;
+    if (effectiveEditingId === 'new') {
+      // Country/Indigo scope writes one row per city in the group so each
+      // city keeps its own independently editable/deletable event record --
+      // tagged with a shared batch_id (only when there's actually more than
+      // one city) so the whole group can be found and deleted together later
+      // if it turns out it should never have gone out that wide.
+      const batchId = multiCity ? crypto.randomUUID() : null;
+      const payload = citySlugs.map((slug) => ({
+        city_slug: slug,
+        batch_id: batchId,
+        title: form.title,
+        category: form.category,
+        start_date: form.start_date,
+        end_date: form.end_date || null,
+        source_url: form.source_url || null,
+      }));
+      const { error: err } = await supabase.from('calendar_events').insert(payload);
+      setBusy(false);
+      if (err) {
+        setError(err.message);
+        return;
+      }
+    } else {
+      // Editing an existing event only ever touches that one row/city,
+      // regardless of what scope is currently active.
+      const { error: err } = await supabase
+        .from('calendar_events')
+        .update({
+          title: form.title,
+          category: form.category,
+          start_date: form.start_date,
+          end_date: form.end_date || null,
+          source_url: form.source_url || null,
+        })
+        .eq('id', editingId);
+      setBusy(false);
+      if (err) {
+        setError(err.message);
+        return;
+      }
     }
     setEditingId(null);
     onChanged();
@@ -105,20 +163,60 @@ export default function DayEventModal({
     if (touching.length === 1) onClose();
   }
 
+  // Deletes every row that was written together in one Country/Indigo-scope
+  // "add event" -- looked up by batch_id across ALL cities, not just the ones
+  // in the currently active scope, since the batch may span cities outside
+  // the view you're deleting from (e.g. added via Indigo, cleaned up from
+  // Mexico scope).
+  async function removeBatch(batchId: string) {
+    if (!supabase) return;
+    setBusy(true);
+    const { data: rows, error: lookupErr } = await supabase
+      .from('calendar_events')
+      .select('id')
+      .eq('batch_id', batchId);
+    if (lookupErr) {
+      setBusy(false);
+      setError(lookupErr.message);
+      return;
+    }
+    const count = rows?.length ?? 0;
+    if (!confirm(`Delete this event from all ${count} ${count === 1 ? 'city' : 'cities'} it was added to?`)) {
+      setBusy(false);
+      return;
+    }
+    const { error: err } = await supabase.from('calendar_events').delete().eq('batch_id', batchId);
+    setBusy(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    onChanged();
+    if (touching.length === 1) onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-neutral-900 mb-1">{cityName}</h2>
-        <p className="text-xs text-neutral-400 mb-4 capitalize">{DATE_LABEL_FMT.format(date)}</p>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-1">{scopeLabel}</h2>
+        <p className="text-xs text-neutral-400 mb-4 capitalize">
+          {DATE_LABEL_FMT.format(date)}
+          {multiCity && ` — ${cities.length} cities`}
+        </p>
 
-        {touching.length > 0 && editingId === null && (
+        {touching.length > 0 && effectiveEditingId === null && (
           <div className="flex flex-col gap-1.5 mb-4">
             {touching.map((ev) => (
               <div key={ev.id} className="flex items-center gap-2 text-sm border border-neutral-100 rounded-md px-3 py-1.5">
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 shrink-0">{CATEGORY_LABEL[ev.category]}</span>
+                {multiCity && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F9D0B8] text-[#883607] shrink-0">
+                    {cityNameBySlug[ev.city_slug] ?? ev.city_slug}
+                  </span>
+                )}
                 <span className="flex-1 truncate">{ev.title}</span>
                 <button onClick={() => startEdit(ev)} className="text-xs text-neutral-400 hover:text-[#FD9153]">
                   Edit
@@ -126,6 +224,15 @@ export default function DayEventModal({
                 <button onClick={() => remove(ev.id)} className="text-xs text-neutral-400 hover:text-red-600">
                   Delete
                 </button>
+                {ev.batch_id && (
+                  <button
+                    onClick={() => removeBatch(ev.batch_id!)}
+                    title="Delete this event from every city it was added to at once"
+                    className="text-xs text-neutral-400 hover:text-red-600"
+                  >
+                    Delete batch
+                  </button>
+                )}
               </div>
             ))}
             <button
@@ -137,8 +244,13 @@ export default function DayEventModal({
           </div>
         )}
 
-        {editingId !== null && (
+        {effectiveEditingId !== null && (
           <div className="border border-neutral-200 rounded-md p-3 bg-neutral-50">
+            {effectiveEditingId === 'new' && multiCity && (
+              <p className="text-[11px] text-neutral-500 mb-2">
+                This event will be added to all {cities.length} cities: {cities.map((c) => c.name).join(', ')}.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2 mb-2">
               <input
                 autoFocus

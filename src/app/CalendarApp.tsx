@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { COUNTRIES, findCity } from '@/lib/cities';
+import { ALL_CITIES, COUNTRIES, findCity } from '@/lib/cities';
 import { isoWeek, getPaycheckDates, getBonusDates, HolidayEntry } from '@/lib/holidays';
 import { supabase } from '@/lib/supabaseClient';
 import AuthModal from './AuthModal';
@@ -63,11 +63,13 @@ const VISIBLE_CATEGORIES: Category[] = ['official_holiday', 'high_demand_celebra
 
 export interface CalendarEvent {
   id: number;
+  city_slug: string;
   start_date: string;
   end_date: string | null;
   category: Category;
   title: string;
   source_url: string | null;
+  batch_id: string | null;
 }
 
 interface DayInfo {
@@ -148,7 +150,7 @@ export default function CalendarApp() {
   const [showHolidays, setShowHolidays] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showBurn, setShowBurn] = useState(false);
-  const [editModeOn, setEditModeOn] = useState(false);
+  const [editScope, setEditScope] = useState<'off' | 'city' | 'country' | 'portfolio'>('off');
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
   // Which half of the year is showing when the burn sidebar is open and the
   // grid is paginated to 6 months instead of all 12. 0 = Jan-Jun, 1 = Jul-Dec.
@@ -329,11 +331,24 @@ export default function CalendarApp() {
   useEffect(() => {
     if (cityAccess !== 'loading' && !canEdit) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset derived UI state when access changes
-      setEditModeOn(false);
+      setEditScope('off');
     }
   }, [canEdit, cityAccess, citySlug]);
 
   const resolved = findCity(citySlug);
+
+  // Which cities a new event gets written to, based on the active edit scope.
+  // 'city' = just the one selected city (today's behaviour), 'country' = every
+  // city sharing the selected city's country, 'portfolio' = all cities in the
+  // app (the "Indigo" portfolio button).
+  const scopeCities =
+    editScope === 'country' && resolved
+      ? resolved.country.cities
+      : editScope === 'portfolio'
+      ? ALL_CITIES
+      : resolved
+      ? [resolved.city]
+      : [];
 
   // These three fetches hit server routes gated by @didi-labs.com access --
   // they need the signed-in user's access token forwarded so the route can
@@ -492,7 +507,7 @@ export default function CalendarApp() {
     setShowHolidays(false);
     setShowAdmin(false);
     setShowBurn(false);
-    setEditModeOn(false);
+    setEditScope('off');
   }
 
   if (!resolved) return null;
@@ -623,14 +638,23 @@ export default function CalendarApp() {
             >
               Holidays
             </button>
-            <button
-              onClick={() => setEditModeOn((v) => !v)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                editModeOn ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
-              }`}
-            >
-              {editModeOn ? `Editing ${resolved!.city.name} — click a day` : `Edit ${resolved!.city.name}`}
-            </button>
+            {(
+              [
+                ['city', resolved!.city.name],
+                ['country', resolved!.country.name],
+                ['portfolio', 'Indigo'],
+              ] as const
+            ).map(([scope, label]) => (
+              <button
+                key={scope}
+                onClick={() => setEditScope((v) => (v === scope ? 'off' : scope))}
+                className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                  editScope === scope ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
+                }`}
+              >
+                {editScope === scope ? `Editing ${label} — click a day` : `Edit ${label}`}
+              </button>
+            ))}
           </>
         )}
 
@@ -707,7 +731,7 @@ export default function CalendarApp() {
               dayMap={dayMap}
               onHover={setTooltip}
               size={cardSize ?? 100}
-              editable={editModeOn}
+              editable={editScope !== 'off'}
               onDayClick={setDayModalDate}
             />
           );
@@ -765,12 +789,11 @@ export default function CalendarApp() {
       />
     )}
 
-    {dayModalDate && resolved && (
+    {dayModalDate && resolved && scopeCities.length > 0 && (
       <DayEventModal
-        citySlug={citySlug}
-        cityName={resolved.city.name}
+        cities={scopeCities}
+        scopeLabel={editScope === 'country' ? resolved.country.name : editScope === 'portfolio' ? 'Indigo' : resolved.city.name}
         date={dayModalDate}
-        events={events}
         onClose={() => setDayModalDate(null)}
         onChanged={refreshData}
       />

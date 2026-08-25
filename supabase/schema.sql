@@ -19,11 +19,17 @@ create table if not exists calendar_events (
   -- by /api/cron/sync-sports) — lets the sync job safely replace only the
   -- rows it owns without touching manually curated events.
   source text not null default 'manual',
+  -- Shared across every row written by one Country/Indigo-scope "add event"
+  -- (one insert per city, same batch_id) so the whole group can be found and
+  -- deleted together later, even from a narrower scope than it was created
+  -- in. Null for ordinary single-city adds -- there's nothing to batch.
+  batch_id uuid,
   created_at timestamptz not null default now()
 );
 
 create index if not exists calendar_events_city_idx on calendar_events (city_slug, start_date);
 create index if not exists calendar_events_source_idx on calendar_events (source);
+create index if not exists calendar_events_batch_idx on calendar_events (batch_id);
 
 -- Prevents a re-run of a seed/insert script from silently duplicating rows
 -- (paired with "on conflict do nothing" on inserts).
@@ -34,6 +40,12 @@ create unique index if not exists calendar_events_no_dupes
 alter table calendar_events enable row level security;
 drop policy if exists "public read calendar_events" on calendar_events;
 create policy "public read calendar_events" on calendar_events for select using (true);
+
+-- Migration for an already-running database (added 2026-08-25, batch delete
+-- for Country/Indigo-scope events): the create table above is a no-op once
+-- the table already exists, so run this once by hand in the SQL Editor.
+-- alter table calendar_events add column if not exists batch_id uuid;
+-- create index if not exists calendar_events_batch_idx on calendar_events (batch_id);
 
 -- Phase 4 placeholders — populate manually until an automated source is confirmed per data owner.
 create table if not exists budget_weekly (
