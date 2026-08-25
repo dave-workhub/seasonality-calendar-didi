@@ -120,7 +120,7 @@ export default function DayEventModal({
               <div key={ev.id} className="flex items-center gap-2 text-sm border border-neutral-100 rounded-md px-3 py-1.5">
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 shrink-0">{CATEGORY_LABEL[ev.category]}</span>
                 <span className="flex-1 truncate">{ev.title}</span>
-                <button onClick={() => startEdit(ev)} className="text-xs text-neutral-400 hover:text-[#2F6D46]">
+                <button onClick={() => startEdit(ev)} className="text-xs text-neutral-400 hover:text-[#FD9153]">
                   Edit
                 </button>
                 <button onClick={() => remove(ev.id)} className="text-xs text-neutral-400 hover:text-red-600">
@@ -130,7 +130,7 @@ export default function DayEventModal({
             ))}
             <button
               onClick={startNew}
-              className="text-xs px-3 py-1.5 rounded-md border border-dashed border-neutral-300 text-neutral-500 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors mt-1"
+              className="text-xs px-3 py-1.5 rounded-md border border-dashed border-neutral-300 text-neutral-500 hover:border-[#FD9153] hover:text-[#FD9153] transition-colors mt-1"
             >
               + Add another event this day
             </button>
@@ -145,12 +145,12 @@ export default function DayEventModal({
                 placeholder="Title"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#2F6D46]"
+                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD9153]"
               />
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value as Category })}
-                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#2F6D46]"
+                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD9153]"
               >
                 {EDITABLE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -164,7 +164,7 @@ export default function DayEventModal({
                   type="date"
                   value={form.start_date}
                   onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                  className="border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#2F6D46]"
+                  className="border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#FD9153]"
                 />
               </label>
               <label className="flex items-center gap-1.5 text-xs text-neutral-500">
@@ -173,14 +173,14 @@ export default function DayEventModal({
                   type="date"
                   value={form.end_date}
                   onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                  className="border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#2F6D46]"
+                  className="border border-neutral-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#FD9153]"
                 />
               </label>
               <input
                 placeholder="Source URL (optional)"
                 value={form.source_url}
                 onChange={(e) => setForm({ ...form, source_url: e.target.value })}
-                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#2F6D46]"
+                className="col-span-2 border border-neutral-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#FD9153]"
               />
             </div>
             {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
@@ -188,7 +188,7 @@ export default function DayEventModal({
               <button
                 disabled={busy || !form.title || !form.start_date}
                 onClick={save}
-                className="text-xs px-3 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-md bg-[#FD9153] text-white font-medium disabled:opacity-50"
               >
                 Save
               </button>

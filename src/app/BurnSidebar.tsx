@@ -350,9 +350,9 @@ function BurnSparkline({ points }: { points: { b: number | null; c: number | nul
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-11 mb-1">
-      <polyline points={linePoints('b')} fill="none" stroke="#2F6D46" strokeWidth="2" />
+      <polyline points={linePoints('b')} fill="none" stroke="#FD9153" strokeWidth="2" />
       <polyline points={linePoints('c')} fill="none" stroke="#D4537E" strokeWidth="2" />
-      {lastBIdx >= 0 && <circle cx={lastBIdx * xStep} cy={toY(lastB!.b as number)} r="2.5" fill="#2F6D46" />}
+      {lastBIdx >= 0 && <circle cx={lastBIdx * xStep} cy={toY(lastB!.b as number)} r="2.5" fill="#FD9153" />}
       {lastCIdx >= 0 && <circle cx={lastCIdx * xStep} cy={toY(lastC!.c as number)} r="2.5" fill="#D4537E" />}
     </svg>
   );
@@ -738,7 +738,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
       <div className="flex items-center justify-between mb-2">
         <p className="text-[11px] font-medium text-neutral-500">{cityName} · weekly burn</p>
         {canUpload && (
-          <label className={`text-[10px] text-[#2F6D46] underline cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
+          <label className={`text-[10px] text-[#FD9153] underline cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
             {busy ? 'Uploading…' : 'Upload CSV'}
             <input
               type="file"
@@ -758,7 +758,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
       {canUpload && (
         <div className="mb-3">
           <label
-            className={`text-[10px] px-2 py-1.5 rounded-md bg-[#2F6D46] text-white font-medium cursor-pointer inline-block ${xlsxBusy ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`text-[10px] px-2 py-1.5 rounded-md bg-[#FD9153] text-white font-medium cursor-pointer inline-block ${xlsxBusy ? 'opacity-50 pointer-events-none' : ''}`}
           >
             {xlsxBusy ? 'Reading file…' : 'Upload weekly XLSX (all cities)'}
             <input
@@ -774,13 +774,13 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
             />
           </label>
           <p className="text-[9px] text-neutral-400 mt-1 mb-0">One tab per city (Year, Week, B Burn, C Burn) — updates every matching city at once.</p>
-          {xlsxStatus && <p className="text-[9px] text-[#2F6D46] mt-1 mb-0">{xlsxStatus}</p>}
+          {xlsxStatus && <p className="text-[9px] text-[#FD9153] mt-1 mb-0">{xlsxStatus}</p>}
           {xlsxError && <p className="text-[9px] text-red-600 mt-1 mb-0">{xlsxError}</p>}
         </div>
       )}
 
       {canUpload && (
-        <button onClick={() => setShowRawImport((v) => !v)} className="text-[10px] text-[#2F6D46] underline mb-2 block">
+        <button onClick={() => setShowRawImport((v) => !v)} className="text-[10px] text-[#FD9153] underline mb-2 block">
           {showRawImport ? '← Hide raw weekly import' : 'Raw weekly import →'}
         </button>
       )}
@@ -799,7 +799,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           ).map(({ kind, label, aliases, value }) => (
             <label key={kind} className="text-[10px] text-neutral-600 flex items-center justify-between cursor-pointer">
               <span>{label}</span>
-              <span className={`underline ${value ? 'text-[#2F6D46]' : 'text-neutral-400'}`}>{value ?? 'Choose file'}</span>
+              <span className={`underline ${value ? 'text-[#FD9153]' : 'text-neutral-400'}`}>{value ?? 'Choose file'}</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -815,17 +815,17 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           <button
             onClick={uploadRawAggregates}
             disabled={rawBusy || (rawBRows.length === 0 && rawCRows.length === 0)}
-            className="text-[10px] px-2 py-1 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50 mt-1"
+            className="text-[10px] px-2 py-1 rounded-md bg-[#FD9153] text-white font-medium disabled:opacity-50 mt-1"
           >
             {rawBusy ? 'Computing…' : 'Compute & upload'}
           </button>
-          {rawStatus && <p className="text-[9px] text-[#2F6D46] m-0">{rawStatus}</p>}
+          {rawStatus && <p className="text-[9px] text-[#FD9153] m-0">{rawStatus}</p>}
           {rawError && <p className="text-[9px] text-red-600 m-0">{rawError}</p>}
         </div>
       )}
 
       {canUpload && !manualOpen && (
-        <button onClick={openManualNew} className="text-[10px] text-[#2F6D46] underline mb-2 block">
+        <button onClick={openManualNew} className="text-[10px] text-[#FD9153] underline mb-2 block">
           + Edit a week manually
         </button>
       )}
@@ -902,7 +902,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
             <button
               onClick={saveManualEdit}
               disabled={manualBusy}
-              className="text-[10px] px-2 py-1 rounded-md bg-[#2F6D46] text-white font-medium disabled:opacity-50"
+              className="text-[10px] px-2 py-1 rounded-md bg-[#FD9153] text-white font-medium disabled:opacity-50"
             >
               {manualBusy ? 'Saving…' : 'Save'}
             </button>
@@ -925,7 +925,7 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
           <BurnSparkline points={sparkPoints} />
           <div className="flex gap-2.5 text-[9px] text-neutral-500">
             <span>
-              <i className="inline-block w-2 h-2 rounded-full bg-[#2F6D46] mr-1" />B burn
+              <i className="inline-block w-2 h-2 rounded-full bg-[#FD9153] mr-1" />B burn
             </span>
             <span>
               <i className="inline-block w-2 h-2 rounded-full bg-[#D4537E] mr-1" />C burn
@@ -934,10 +934,10 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
         </div>
       )}
 
-      {status && <p className="text-[10px] text-[#2F6D46] mb-2">{status}</p>}
+      {status && <p className="text-[10px] text-[#FD9153] mb-2">{status}</p>}
       {error && <p className="text-[10px] text-red-600 mb-2">{error}</p>}
 
-      <button onClick={() => setShowCompare((v) => !v)} className="text-[10px] text-[#2F6D46] underline mb-2 block">
+      <button onClick={() => setShowCompare((v) => !v)} className="text-[10px] text-[#FD9153] underline mb-2 block">
         {showCompare ? '← Back to recent weeks' : 'Compare weeks →'}
       </button>
 
@@ -987,8 +987,8 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
                 </p>
                 <p className="text-[10px] text-neutral-700">B {weekB.b_burn_pct ?? '—'}% · C {weekB.c_burn_pct ?? '—'}%</p>
               </div>
-              <div className="rounded-md border border-[#9AC7A4] bg-[#eef7f0] px-2 py-1.5">
-                <p className="text-[10px] font-medium text-[#1E4A2C] mb-0.5">pp change (A vs B)</p>
+              <div className="rounded-md border border-[#F9D0B8] bg-[#eef7f0] px-2 py-1.5">
+                <p className="text-[10px] font-medium text-[#883607] mb-0.5">pp change (A vs B)</p>
                 <p className="text-[10px] text-neutral-700">
                   B: <DeltaBadge pp={ppDelta(weekA.b_burn_pct, weekB.b_burn_pct)} />
                   {ppDelta(weekA.b_burn_pct, weekB.b_burn_pct) === null && <span className="text-neutral-400">no data</span>}
@@ -1011,14 +1011,14 @@ export default function BurnSidebar({ citySlug, cityName, canUpload }: { citySlu
             return (
               <div
                 key={r.id}
-                className={`rounded-md border px-2 py-1.5 ${isCurrent ? 'border-[#9AC7A4] bg-[#eef7f0]' : 'border-neutral-100'}`}
+                className={`rounded-md border px-2 py-1.5 ${isCurrent ? 'border-[#F9D0B8] bg-[#eef7f0]' : 'border-neutral-100'}`}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[10px] font-medium m-0 ${isCurrent ? 'text-[#1E4A2C]' : 'text-neutral-500'}`}>
+                  <p className={`text-[10px] font-medium m-0 ${isCurrent ? 'text-[#883607]' : 'text-neutral-500'}`}>
                     Week {r.iso_week} · {isoWeekLabel(r.iso_year, r.iso_week)}
                   </p>
                   {canUpload && (
-                    <button onClick={() => openManualEdit(r)} className="text-[9px] text-[#2F6D46] underline shrink-0">
+                    <button onClick={() => openManualEdit(r)} className="text-[9px] text-[#FD9153] underline shrink-0">
                       Edit
                     </button>
                   )}

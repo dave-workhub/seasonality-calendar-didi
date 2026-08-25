@@ -77,7 +77,7 @@ export default function AuthModal({
           setSignupDone(false);
           setMode('login');
         }}
-        className="px-4 py-1.5 rounded-md bg-[#2F6D46] text-white text-sm font-medium hover:bg-[#26593A] transition-colors"
+        className="px-4 py-1.5 rounded-md bg-[#FD9153] text-white text-sm font-medium hover:bg-[#FC5E03] transition-colors"
       >
         Sign in
       </button>
@@ -116,7 +116,7 @@ export default function AuthModal({
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2F6D46]"
+          className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD9153]"
         />
         <input
           type="password"
@@ -125,13 +125,13 @@ export default function AuthModal({
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2F6D46]"
+          className="border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FD9153]"
         />
         {error && <p className="text-xs text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 rounded-md bg-[#2F6D46] text-white text-sm font-medium hover:bg-[#26593A] transition-colors disabled:opacity-50"
+          className="px-4 py-2 rounded-md bg-[#FD9153] text-white text-sm font-medium hover:bg-[#FC5E03] transition-colors disabled:opacity-50"
         >
           {loading ? 'One moment…' : mode === 'login' ? 'Log in' : 'Sign up'}
         </button>
@@ -141,7 +141,7 @@ export default function AuthModal({
           setMode(mode === 'login' ? 'signup' : 'login');
           setError(null);
         }}
-        className="text-xs text-neutral-500 hover:text-[#2F6D46] mt-3 underline"
+        className="text-xs text-neutral-500 hover:text-[#FD9153] mt-3 underline"
       >
         {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
       </button>

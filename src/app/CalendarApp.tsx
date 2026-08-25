@@ -52,7 +52,7 @@ export const EDITABLE_CATEGORIES: Category[] = ['high_demand_celebration', 'scho
 // days, green for other events, blue for school breaks.
 const CATEGORY_META: Record<Category, { label: string; dot: string; cell: string }> = {
   official_holiday: { label: 'Official Holidays', dot: 'bg-[#BE252F]', cell: 'bg-[#BE252F] text-white font-bold' },
-  high_demand_celebration: { label: 'High Demand Celebrations', dot: 'bg-[#9AC7A4]', cell: 'bg-[#9AC7A4] text-[#1E4A2C]' },
+  high_demand_celebration: { label: 'High Demand Celebrations', dot: 'bg-[#F9D0B8]', cell: 'bg-[#F9D0B8] text-[#883607]' },
   school_break: { label: 'School Break', dot: 'bg-[#6B97B0]', cell: 'bg-[#6B97B0] text-white' },
   back_to_school: { label: 'Back to School', dot: 'bg-[#6B97B0]', cell: 'bg-[#6B97B0] text-white' },
   other_event: { label: 'Other Events (Concerts, sports, etc)', dot: 'bg-[#66AEA1]', cell: 'bg-[#66AEA1] text-white' },
@@ -534,7 +534,7 @@ export default function CalendarApp() {
       <div className="flex items-start justify-between gap-6 mb-2">
         <div>
           <h1 className="text-xl text-neutral-900 [font-family:var(--font-jakarta)] tracking-tight">
-            <span className="text-[#2F6D46]">Seasonality</span> Calendar
+            <span className="text-[#FD9153]">Seasonality</span> Calendar
           </h1>
           <span className={`block text-[10px] text-neutral-400 mt-1.5 transition-opacity ${loading ? 'opacity-100' : 'opacity-0'}`}>
             Loading…
@@ -544,7 +544,7 @@ export default function CalendarApp() {
         <div className="flex flex-col items-start gap-2 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
           <select
-            className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#2F6D46] transition-colors"
+            className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#FD9153] transition-colors"
             value={countrySlug}
             onChange={(e) => {
               const newCountry = COUNTRIES.find((c) => c.code === e.target.value)!;
@@ -560,7 +560,7 @@ export default function CalendarApp() {
           </select>
 
           <select
-            className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#2F6D46] transition-colors"
+            className="appearance-none cursor-pointer text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-neutral-300 focus:outline-none focus:border-[#FD9153] transition-colors"
             value={citySlug}
             onChange={(e) => setCitySlug(e.target.value)}
           >
@@ -574,7 +574,7 @@ export default function CalendarApp() {
           <div className="flex items-center gap-1.5 border border-neutral-200 rounded-md px-1.5 py-1">
             <button
               aria-label="Previous year"
-              className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#2F6D46] transition-colors"
+              className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#FD9153] transition-colors"
               onClick={() => {
                 setYear((y) => y - 1);
                 setMonthPage(0);
@@ -585,7 +585,7 @@ export default function CalendarApp() {
             <span className="text-sm font-bold text-neutral-900 tabular-nums w-10 text-center">{year}</span>
             <button
               aria-label="Next year"
-              className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#2F6D46] transition-colors"
+              className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:text-[#FD9153] transition-colors"
               onClick={() => {
                 setYear((y) => y + 1);
                 setMonthPage(0);
@@ -600,7 +600,7 @@ export default function CalendarApp() {
         {profile?.is_admin && (
           <button
             onClick={() => setShowAdmin(true)}
-            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153] transition-colors"
           >
             Admin
           </button>
@@ -609,7 +609,7 @@ export default function CalendarApp() {
         <button
           onClick={() => setShowBurn((v) => !v)}
           className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-            showBurn ? 'bg-[#2F6D46] text-white hover:bg-[#26593A]' : 'border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46]'
+            showBurn ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
           }`}
         >
           Burn: {showBurn ? 'on' : 'off'}
@@ -619,14 +619,14 @@ export default function CalendarApp() {
           <>
             <button
               onClick={() => setShowHolidays(true)}
-              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153] transition-colors"
             >
               Holidays
             </button>
             <button
               onClick={() => setEditModeOn((v) => !v)}
               className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                editModeOn ? 'bg-[#2F6D46] text-white hover:bg-[#26593A]' : 'border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46]'
+                editModeOn ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
               }`}
             >
               {editModeOn ? `Editing ${resolved!.city.name} — click a day` : `Edit ${resolved!.city.name}`}
@@ -639,7 +639,7 @@ export default function CalendarApp() {
         ) : cityAccess === 'none' ? (
           <button
             onClick={requestCityAccess}
-            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+            className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153] transition-colors"
           >
             Request access to {resolved!.city.name}
           </button>
@@ -648,7 +648,7 @@ export default function CalendarApp() {
             <span className="text-neutral-400">Your request for {resolved!.city.name} was rejected</span>
             <button
               onClick={requestCityAccess}
-              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#2F6D46] hover:text-[#2F6D46] transition-colors"
+              className="px-2.5 py-1 rounded-md border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153] transition-colors"
             >
               Request again
             </button>
@@ -658,7 +658,7 @@ export default function CalendarApp() {
         {/* session is always present here -- the whole page is gated behind sign-in above */}
         <span className="flex items-center gap-1.5 text-neutral-400">
           {session.user.email}
-          <button onClick={signOut} className="underline hover:text-[#2F6D46]">
+          <button onClick={signOut} className="underline hover:text-[#FD9153]">
             Sign out
           </button>
         </span>
@@ -677,7 +677,7 @@ export default function CalendarApp() {
             aria-label="Show January–June"
             disabled={monthPage === 0}
             onClick={() => setMonthPage(0)}
-            className="text-neutral-400 hover:text-[#2F6D46] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
+            className="text-neutral-400 hover:text-[#FD9153] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
           >
             ‹
           </button>
@@ -686,7 +686,7 @@ export default function CalendarApp() {
             aria-label="Show July–December"
             disabled={monthPage === 1}
             onClick={() => setMonthPage(1)}
-            className="text-neutral-400 hover:text-[#2F6D46] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
+            className="text-neutral-400 hover:text-[#FD9153] disabled:opacity-20 disabled:hover:text-neutral-400 transition-colors"
           >
             ›
           </button>
@@ -830,7 +830,7 @@ function MonthGrid({
       style={{ width: size, height: size, padding: pad }}
     >
       <div
-        className="text-center font-semibold text-white bg-[#2F6D46] tracking-wide shrink-0"
+        className="text-center font-semibold text-white bg-[#FD9153] tracking-wide shrink-0"
         style={{ fontSize: badgeFont, padding: `${pad / 3}px ${pad}px`, margin: `-${pad}px -${pad}px ${pad / 2}px -${pad}px` }}
       >
         {monthName}
@@ -839,7 +839,7 @@ function MonthGrid({
         {DAY_HEADERS.map((h, i) => (
           <div
             key={h}
-            className={`text-center font-semibold ${i === 6 ? 'text-[#2F6D46]' : 'text-neutral-400'}`}
+            className={`text-center font-semibold ${i === 6 ? 'text-[#FD9153]' : 'text-neutral-400'}`}
             style={{ fontSize: headerFont }}
           >
             {h}
@@ -848,7 +848,7 @@ function MonthGrid({
       </div>
       <div className="flex-1 min-h-0 grid gap-[2px]" style={{ gridTemplateRows: 'repeat(6, 1fr)' }}>
         {weeks.map((wk, wi) => (
-          <div key={wi} className="grid grid-cols-7 gap-[2px] rounded-sm hover:bg-[#2F6D46]/10 transition-colors">
+          <div key={wi} className="grid grid-cols-7 gap-[2px] rounded-sm hover:bg-[#FD9153]/10 transition-colors">
             {wk.map((dt, di) => {
               if (!dt) return <div key={di} />;
               const info = dayMap.get(dateKey(dt));
@@ -856,10 +856,10 @@ function MonthGrid({
               const primaryCategory = info?.categories[0]?.category;
               const cellClasses = [
                 'flex flex-col items-center justify-center rounded-sm overflow-hidden leading-tight h-full w-full',
-                editable ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#2F6D46] hover:-outline-offset-2' : 'cursor-default',
+                editable ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#FD9153] hover:-outline-offset-2' : 'cursor-default',
                 info?.holidayName ? CATEGORY_META.official_holiday.cell + ' rounded' : '',
                 !info?.holidayName && primaryCategory ? CATEGORY_META[primaryCategory].cell + ' rounded' : '',
-                !info?.holidayName && !primaryCategory && isSun ? 'text-[#2F6D46]/70' : '',
+                !info?.holidayName && !primaryCategory && isSun ? 'text-[#FD9153]/70' : '',
                 !info?.holidayName && !primaryCategory && !isSun ? 'text-neutral-800' : '',
                 info?.isToday ? 'outline outline-2 outline-neutral-900 -outline-offset-2 rounded' : '',
               ].join(' ');
