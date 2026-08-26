@@ -3,12 +3,6 @@
 import { useEffect, useState } from 'react';
 import type { HourlyPoint, HourlyWeatherResponse } from './api/weather-hourly/route';
 
-// Rolling window shown around "now": a few hours of recent context plus the
-// rest of the day ahead -- this is meant to answer "is the demand spike I'm
-// seeing right now caused by rain?", not to browse the whole 2-day fetch.
-const HOURS_BEFORE_NOW = 3;
-const HOURS_AFTER_NOW = 20;
-
 const REFRESH_MS = 15 * 60 * 1000; // Open-Meteo's model updates roughly hourly; no need to poll faster than this
 
 // Coarse WMO weather-code -> emoji mapping, grouped into the buckets that
@@ -88,16 +82,24 @@ export default function HourlyWeatherPanel({
     };
   }, [citySlug, authHeaders]);
 
-  const nowIndex = nowTime ? hours.findIndex((h) => h.time === nowTime) : -1;
-  const windowStart = nowIndex >= 0 ? Math.max(0, nowIndex - HOURS_BEFORE_NOW) : 0;
-  const windowEnd = nowIndex >= 0 ? nowIndex + HOURS_AFTER_NOW + 1 : hours.length;
-  const visible = hours.slice(windowStart, windowEnd);
+  // Show the whole current day, 00:00 through 23:00 -- "today" as defined by
+  // Open-Meteo's own city-local current_weather.time, not the viewer's date.
+  const today = nowTime ? nowTime.slice(0, 10) : hours[0]?.time.slice(0, 10);
+  const visible = today ? hours.filter((h) => h.time.slice(0, 10) === today) : [];
+
+  // Auto-scroll the current hour into view on load/refresh -- with all 24
+  // hours listed, the current one would otherwise be scrolled off below the
+  // fold most of the day.
+  const [nowRowEl, setNowRowEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    nowRowEl?.scrollIntoView({ block: 'center' });
+  }, [nowRowEl, nowTime]);
 
   return (
     <div className="w-[220px] shrink-0 border border-neutral-200 rounded-md overflow-hidden flex flex-col max-h-[80vh]">
       <div className="px-3 py-2 border-b border-neutral-200 bg-neutral-50/60">
         <p className="text-xs font-semibold text-neutral-900">{cityName} weather</p>
-        <p className="text-[10px] text-neutral-400">Hourly, live from Open-Meteo</p>
+        <p className="text-[10px] text-neutral-400">{today ? formatDayLabel(today + 'T00:00') : ''} — hourly, live from Open-Meteo</p>
       </div>
 
       {loading && hours.length === 0 && <p className="text-xs text-neutral-400 px-3 py-3">Loading…</p>}
@@ -105,30 +107,24 @@ export default function HourlyWeatherPanel({
 
       {visible.length > 0 && (
         <div className="overflow-y-auto flex-1">
-          {visible.map((h, i) => {
+          {visible.map((h) => {
             const isNow = h.time === nowTime;
-            const prevDay = i > 0 ? formatDayLabel(visible[i - 1].time) : null;
-            const day = formatDayLabel(h.time);
-            const showDayDivider = i === 0 || day !== prevDay;
             const rain = (h.precipMm ?? 0) >= 0.5 || (h.precipProb ?? 0) >= 50;
             return (
-              <div key={h.time}>
-                {showDayDivider && (
-                  <div className="px-3 py-1 bg-neutral-50 text-[9px] text-neutral-400 font-medium sticky top-0">{day}</div>
-                )}
-                <div
-                  className={`flex items-center gap-2 px-3 py-1.5 text-xs border-b border-neutral-50 ${
-                    isNow ? 'bg-[#F9D0B8]/40 font-medium' : ''
-                  }`}
-                >
-                  <span className="w-11 shrink-0 text-neutral-500">{formatHourLabel(h.time)}</span>
-                  <span className="w-5 shrink-0 text-center">{weatherEmoji(h.weatherCode)}</span>
-                  <span className="w-9 shrink-0 text-neutral-700">{h.tempC !== null ? `${Math.round(h.tempC)}°` : '—'}</span>
-                  <span className={`flex-1 text-right ${rain ? 'text-[#883607]' : 'text-neutral-400'}`}>
-                    {h.precipProb !== null ? `${h.precipProb}%` : '—'}
-                    {h.precipMm !== null && h.precipMm > 0 ? ` (${h.precipMm.toFixed(1)}mm)` : ''}
-                  </span>
-                </div>
+              <div
+                key={h.time}
+                ref={isNow ? setNowRowEl : undefined}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs border-b border-neutral-50 ${
+                  isNow ? 'bg-[#F9D0B8]/40 font-medium' : ''
+                }`}
+              >
+                <span className="w-11 shrink-0 text-neutral-500">{formatHourLabel(h.time)}</span>
+                <span className="w-5 shrink-0 text-center">{weatherEmoji(h.weatherCode)}</span>
+                <span className="w-9 shrink-0 text-neutral-700">{h.tempC !== null ? `${Math.round(h.tempC)}°` : '—'}</span>
+                <span className={`flex-1 text-right ${rain ? 'text-[#883607]' : 'text-neutral-400'}`}>
+                  {h.precipProb !== null ? `${h.precipProb}%` : '—'}
+                  {h.precipMm !== null && h.precipMm > 0 ? ` (${h.precipMm.toFixed(1)}mm)` : ''}
+                </span>
               </div>
             );
           })}
