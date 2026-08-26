@@ -10,6 +10,7 @@ import HolidaysPanel from './EditPanel';
 import DayEventModal from './DayEventModal';
 import AdminPanel from './AdminPanel';
 import BurnSidebar from './BurnSidebar';
+import HourlyWeatherPanel from './HourlyWeatherPanel';
 
 export interface Profile {
   id: string;
@@ -40,6 +41,8 @@ const STORAGE_KEY = 'seasonality-calendar-selection';
 // Burn sidebar width (w-[210px]) + the row's gap-4 — reserved off the grid's
 // available width in the card-sizing calculation below.
 const BURN_SIDEBAR_RESERVED = 210 + 16;
+// Same idea for the hourly weather panel (w-[220px]) on the other side.
+const WEATHER_PANEL_RESERVED = 220 + 16;
 
 export type Category = 'official_holiday' | 'high_demand_celebration' | 'school_break' | 'back_to_school' | 'other_event';
 
@@ -150,6 +153,7 @@ export default function CalendarApp() {
   const [showHolidays, setShowHolidays] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showBurn, setShowBurn] = useState(false);
+  const [showWeather, setShowWeather] = useState(false);
   const [editScope, setEditScope] = useState<'off' | 'city' | 'country' | 'portfolio'>('off');
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
   // Which half of the year is showing when the burn sidebar is open and the
@@ -265,15 +269,17 @@ export default function CalendarApp() {
       const c = Math.min(width < 640 ? 2 : width < 1024 ? 3 : width < 1280 ? 4 : 6, monthsShown);
       const rows = Math.ceil(monthsShown / c);
 
-      // Measured from contentAreaRef — the unpadded flex row wrapping both
-      // the grid and the sidebar — not gridWrapRef itself (which no longer
-      // shrinks to fit, so measuring its own box would just echo back the
-      // last cardSize) and not the padded max-w container (whose clientWidth
-      // includes the padding, overstating what children actually get). The
-      // burn sidebar's width is subtracted explicitly since it's a sibling
-      // inside this same row, not accounted for by the measurement itself.
+      // Measured from contentAreaRef — the unpadded flex row wrapping the
+      // grid and its sibling panels — not gridWrapRef itself (which no
+      // longer shrinks to fit, so measuring its own box would just echo back
+      // the last cardSize) and not the padded max-w container (whose
+      // clientWidth includes the padding, overstating what children actually
+      // get). Each sidebar/panel's width is subtracted explicitly since
+      // they're siblings inside this same row, not accounted for by the
+      // measurement itself.
       const containerWidth = contentAreaRef.current?.clientWidth ?? width;
-      const availableWidth = containerWidth - (burnSidebarOpen ? BURN_SIDEBAR_RESERVED : 0);
+      const availableWidth =
+        containerWidth - (burnSidebarOpen ? BURN_SIDEBAR_RESERVED : 0) - (showWeather ? WEATHER_PANEL_RESERVED : 0);
       const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
       const legendHeight = legendRef.current?.getBoundingClientRect().height ?? 40;
       const breathingRoom = 72; // grid-wrap py-6 (48) + legend's mt-3 (12) + safety buffer
@@ -296,9 +302,9 @@ export default function CalendarApp() {
       window.removeEventListener('resize', recompute);
       ro.disconnect();
     };
-    // burnSidebarOpen is a dependency because it changes how much width is
-    // reserved for the sidebar in the calculation above.
-  }, [burnSidebarOpen]);
+    // burnSidebarOpen/showWeather are dependencies because they change how
+    // much width is reserved for each panel in the calculation above.
+  }, [burnSidebarOpen, showWeather]);
 
   // Keep the tooltip fully on-screen even when hovering a day near the viewport edge.
   useLayoutEffect(() => {
@@ -536,11 +542,18 @@ export default function CalendarApp() {
     );
   }
 
-  // The burn sidebar (admin-only) adds extra width alongside the grid.
-  // Widening the page container when it's open gives that extra width room
-  // to exist in, on top of the grid's own width now being protected by
+  // The burn sidebar and/or weather panel add extra width alongside the grid.
+  // Widening the page container when either is open gives that extra width
+  // room to exist in, on top of the grid's own width now being protected by
   // shrink-0 + the explicit reservation in the sizing effect above.
-  const containerMaxW = burnSidebarOpen ? 'max-w-[1720px]' : 'max-w-[1500px]';
+  const containerMaxW =
+    burnSidebarOpen && showWeather
+      ? 'max-w-[1940px]'
+      : burnSidebarOpen
+      ? 'max-w-[1720px]'
+      : showWeather
+      ? 'max-w-[1720px]'
+      : 'max-w-[1500px]';
 
   return (
     <>
@@ -630,6 +643,15 @@ export default function CalendarApp() {
           Burn: {showBurn ? 'on' : 'off'}
         </button>
 
+        <button
+          onClick={() => setShowWeather((v) => !v)}
+          className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+            showWeather ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
+          }`}
+        >
+          Weather: {showWeather ? 'on' : 'off'}
+        </button>
+
         {canEdit && (
           <>
             <button
@@ -694,6 +716,9 @@ export default function CalendarApp() {
     <div className="flex-1 flex flex-col justify-center">
     <div className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
       <div ref={contentAreaRef} className="flex gap-4 items-start overflow-x-auto">
+      {showWeather && resolved && (
+        <HourlyWeatherPanel citySlug={citySlug} cityName={resolved.city.name} authHeaders={authHeaders} />
+      )}
       <div className="shrink-0">
       {burnSidebarOpen && (
         <div className="flex items-center justify-center gap-3 mb-2">
