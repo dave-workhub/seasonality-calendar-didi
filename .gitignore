@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except a template with no real secrets, meant to be committed.
+!.env*.example
 
 # vercel
 .vercel
@@ -45,3 +47,7 @@ next-env.d.ts
 
 # Google OAuth credential JSON downloads (never commit real secrets)
 client_secret_*.json
+
+# .env* is ignored twice above (duplicate from an earlier commit) -- this
+# negation has to come after both occurrences to actually take effect.
+!.env*.example
