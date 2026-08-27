@@ -99,7 +99,7 @@ export default function HourlyWeatherPanel({
     <div className="w-[220px] shrink-0 border border-neutral-200 rounded-md overflow-hidden flex flex-col max-h-[80vh]">
       <div className="px-3 py-2 border-b border-neutral-200 bg-neutral-50/60">
         <p className="text-xs font-semibold text-neutral-900">{cityName} weather</p>
-        <p className="text-[10px] text-neutral-400">{today ? formatDayLabel(today + 'T00:00') : ''} — hourly, live from Open-Meteo</p>
+        <p className="text-[10px] text-neutral-400">{today ? formatDayLabel(today + 'T00:00') : ''} — Hour-by-hour, live feed</p>
       </div>
 
       {loading && hours.length === 0 && <p className="text-xs text-neutral-400 px-3 py-3">Loading…</p>}
