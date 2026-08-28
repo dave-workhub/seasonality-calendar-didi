@@ -154,6 +154,10 @@ export default function CalendarApp() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showBurn, setShowBurn] = useState(false);
   const [showWeather, setShowWeather] = useState(false);
+  // YYYY-MM-DD of the day the user last hovered over while the weather panel
+  // is open; null = show live today. Stays on the last hovered day until the
+  // user clicks "Today" in the panel or toggles weather off and back on.
+  const [weatherDate, setWeatherDate] = useState<string | null>(null);
   const [editScope, setEditScope] = useState<'off' | 'city' | 'country' | 'portfolio'>('off');
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
   // Which half of the year is showing when the burn sidebar is open and the
@@ -644,7 +648,10 @@ export default function CalendarApp() {
         </button>
 
         <button
-          onClick={() => setShowWeather((v) => !v)}
+          onClick={() => {
+            setShowWeather((v) => !v);
+            setWeatherDate(null); // reset to live today whenever toggling
+          }}
           className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
             showWeather ? 'bg-[#FD9153] text-white hover:bg-[#FC5E03]' : 'border border-neutral-200 text-neutral-600 hover:border-[#FD9153] hover:text-[#FD9153]'
           }`}
@@ -717,7 +724,13 @@ export default function CalendarApp() {
     <div className={`${containerMaxW} mx-auto w-full px-8 lg:px-14 py-6`}>
       <div ref={contentAreaRef} className="flex gap-4 items-start overflow-x-auto">
       {showWeather && resolved && (
-        <HourlyWeatherPanel citySlug={citySlug} cityName={resolved.city.name} authHeaders={authHeaders} />
+        <HourlyWeatherPanel
+          citySlug={citySlug}
+          cityName={resolved.city.name}
+          authHeaders={authHeaders}
+          selectedDate={weatherDate ?? undefined}
+          onResetToLive={() => setWeatherDate(null)}
+        />
       )}
       <div className="shrink-0">
       {burnSidebarOpen && (
@@ -758,6 +771,10 @@ export default function CalendarApp() {
               size={cardSize ?? 100}
               editable={editScope !== 'off'}
               onDayClick={setDayModalDate}
+              onDayHover={showWeather ? (d) => {
+                const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                setWeatherDate(iso);
+              } : undefined}
             />
           );
         })}
@@ -838,6 +855,7 @@ function MonthGrid({
   size,
   editable,
   onDayClick,
+  onDayHover,
 }: {
   year: number;
   month: number;
@@ -847,6 +865,7 @@ function MonthGrid({
   size: number;
   editable: boolean;
   onDayClick: (date: Date) => void;
+  onDayHover?: (date: Date) => void;
 }) {
   const firstDow = new Date(year, month, 1).getDay();
   const offset = firstDow === 0 ? 6 : firstDow - 1;
@@ -945,6 +964,7 @@ function MonthGrid({
                   key={di}
                   className={cellClasses}
                   onMouseMove={(e) => onHover({ x: e.clientX, y: e.clientY, text: tipText })}
+                  onMouseEnter={() => onDayHover?.(dt)}
                   onMouseLeave={() => onHover(null)}
                   onClick={editable ? () => onDayClick(dt) : undefined}
                 >
