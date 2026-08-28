@@ -770,11 +770,17 @@ export default function CalendarApp() {
               onHover={setTooltip}
               size={cardSize ?? 100}
               editable={editScope !== 'off'}
-              onDayClick={setDayModalDate}
-              onDayHover={showWeather ? (d) => {
-                const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                setWeatherDate(iso);
-              } : undefined}
+              onDayClick={
+                editScope !== 'off'
+                  ? setDayModalDate  // edit mode: open event modal
+                  : showWeather
+                  ? (d) => {
+                      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      setWeatherDate(iso);
+                    }
+                  : undefined  // neither edit nor weather panel: not clickable
+              }
+              selectedWeatherDate={showWeather ? (weatherDate ?? undefined) : undefined}
             />
           );
         })}
@@ -855,7 +861,7 @@ function MonthGrid({
   size,
   editable,
   onDayClick,
-  onDayHover,
+  selectedWeatherDate,
 }: {
   year: number;
   month: number;
@@ -864,8 +870,10 @@ function MonthGrid({
   onHover: (t: { x: number; y: number; text: string } | null) => void;
   size: number;
   editable: boolean;
-  onDayClick: (date: Date) => void;
-  onDayHover?: (date: Date) => void;
+  // Optional — when defined, any day cell is clickable; parent decides what to do
+  onDayClick?: (date: Date) => void;
+  // YYYY-MM-DD of the currently selected weather day; shows an orange ring on that cell
+  selectedWeatherDate?: string;
 }) {
   const firstDow = new Date(year, month, 1).getDay();
   const offset = firstDow === 0 ? 6 : firstDow - 1;
@@ -921,14 +929,19 @@ function MonthGrid({
               const info = dayMap.get(dateKey(dt));
               const isSun = dt.getDay() === 0;
               const primaryCategory = info?.categories[0]?.category;
+              const dtIso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+              const isWeatherSelected = !!selectedWeatherDate && dtIso === selectedWeatherDate;
               const cellClasses = [
                 'flex flex-col items-center justify-center rounded-sm overflow-hidden leading-tight h-full w-full',
-                editable ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-[#FD9153] hover:-outline-offset-2' : 'cursor-default',
+                onDayClick ? 'cursor-pointer' : 'cursor-default',
+                editable ? 'hover:outline hover:outline-2 hover:outline-[#FD9153] hover:-outline-offset-2' : '',
                 info?.holidayName ? CATEGORY_META.official_holiday.cell + ' rounded' : '',
                 !info?.holidayName && primaryCategory ? CATEGORY_META[primaryCategory].cell + ' rounded' : '',
                 !info?.holidayName && !primaryCategory && isSun ? 'text-[#FD9153]/70' : '',
                 !info?.holidayName && !primaryCategory && !isSun ? 'text-neutral-800' : '',
-                info?.isToday ? 'outline outline-2 outline-neutral-900 -outline-offset-2 rounded' : '',
+                // Weather-selected ring takes precedence over the today ring so both are visible
+                isWeatherSelected ? 'outline outline-2 outline-[#FD9153] -outline-offset-2 rounded' : '',
+                info?.isToday && !isWeatherSelected ? 'outline outline-2 outline-neutral-900 -outline-offset-2 rounded' : '',
               ].join(' ');
 
               const rainy = info?.rain && isRainyDay(info.rain);
@@ -964,9 +977,8 @@ function MonthGrid({
                   key={di}
                   className={cellClasses}
                   onMouseMove={(e) => onHover({ x: e.clientX, y: e.clientY, text: tipText })}
-                  onMouseEnter={() => onDayHover?.(dt)}
                   onMouseLeave={() => onHover(null)}
-                  onClick={editable ? () => onDayClick(dt) : undefined}
+                  onClick={onDayClick ? () => onDayClick(dt) : undefined}
                 >
                   <span style={{ fontSize: dayFont }}>{dt.getDate()}</span>
                   {emojis && (
