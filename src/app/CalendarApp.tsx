@@ -11,6 +11,7 @@ import DayEventModal from './DayEventModal';
 import AdminPanel from './AdminPanel';
 import BurnSidebar from './BurnSidebar';
 import HourlyWeatherPanel from './HourlyWeatherPanel';
+import NewsFeed from './NewsFeed';
 
 export interface Profile {
   id: string;
@@ -802,6 +803,10 @@ export default function CalendarApp() {
           </span>
         ))}
       </div>
+
+      {resolved && (
+        <NewsFeed citySlug={citySlug} cityName={resolved.city.name} authHeaders={authHeaders} />
+      )}
 
       {holidaySource === 'algorithmic-fallback' && (
         <div className="text-center text-[11px] text-neutral-400 mt-2">
