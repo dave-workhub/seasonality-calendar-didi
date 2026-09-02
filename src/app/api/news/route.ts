@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(feedUrl, {
-      next: { revalidate: 1800 },
+      next: { revalidate: 43200 },
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SeasonalityCalendar/1.0)' },
     });
     if (!res.ok) return NextResponse.json({ error: `RSS fetch failed: ${res.status}` }, { status: 502 });
