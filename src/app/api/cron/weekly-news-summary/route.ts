@@ -62,7 +62,11 @@ export async function GET(req: NextRequest) {
 
     try {
       const rssRes = await fetch(feedUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SeasonalityCalendar/1.0)' },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'es-419,es;q=0.9,en;q=0.7',
+        },
       });
       if (!rssRes.ok) { results[city.slug] = `rss error ${rssRes.status}`; continue; }
 
