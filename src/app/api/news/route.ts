@@ -20,20 +20,26 @@ const NEWS_FEEDS: Record<string, string[]> = {
   ],
 };
 
-// Terms that anchor a headline to the city — catches local news even without demand keywords
-const CITY_TERMS: Record<string, string[]> = {
-  cartagena:  ['cartagena'],
-  medellin:   ['medellín', 'medellin', 'antioquia'],
-  saltillo:   ['saltillo', 'coahuila'],
-  hermosillo: ['hermosillo', 'sonora'],
-  merida:     ['mérida', 'merida', 'yucatán', 'yucatan'],
-};
-
-const DEMAND_KEYWORDS = [
-  'movilidad','tráfico','trafico','protesta','manifestación','manifestacion',
-  'paro','huelga','bloqueo','concierto','festival','feria','clima','lluvia',
-  'inundación','inundacion','accidente','cierre','tormenta','evento',
-  'desvío','desvio','transporte','vialidad','carretera',
+// Only show headlines that clearly relate to mobility, weather, or demand-moving events.
+// No city-name fallback — a random arrest mentioning the city should not appear.
+const RELEVANT_KEYWORDS = [
+  // Traffic & road infrastructure
+  'tráfico', 'trafico', 'vialidad', 'carretera', 'autopista',
+  'cierre', 'desvío', 'desvio', 'bloqueo', 'accidente', 'choque',
+  'obras', 'puente', 'bache', 'hundimiento', 'derrumbe', 'deslizamiento',
+  'semáforo', 'semaforo', 'transporte',
+  // Strikes & protests (can block roads / reduce demand)
+  'huelga', 'paro', 'protesta', 'manifestación', 'manifestacion', 'marcha',
+  'camioneros', 'choferes', 'metrobús', 'metrobus',
+  // Weather
+  'lluvia', 'lluvias', 'tormenta', 'inundación', 'inundacion', 'inundaciones',
+  'huracán', 'huracan', 'ciclón', 'ciclon', 'granizo',
+  'frente frío', 'frente frio', 'calor extremo', 'ola de calor',
+  'precipitación', 'precipitacion', 'alerta meteoro', 'alerta por lluvia',
+  // Events & demand (concerts, fairs, school breaks, holidays)
+  'concierto', 'festival', 'feria', 'carnaval', 'desfile',
+  'regreso a clases', 'inicio de clases', 'vacaciones escolares',
+  'feriado', 'asueto', 'puente vacacional', 'día festivo', 'dia festivo',
 ];
 
 export interface NewsItem {
@@ -43,11 +49,9 @@ export interface NewsItem {
   pubDate: string;
 }
 
-function isRelevant(title: string, citySlug: string): boolean {
+function isRelevant(title: string): boolean {
   const lower = title.toLowerCase();
-  const hasDemand = DEMAND_KEYWORDS.some(kw => lower.includes(kw));
-  const hasCity = (CITY_TERMS[citySlug] ?? []).some(t => lower.includes(t));
-  return hasDemand || hasCity;
+  return RELEVANT_KEYWORDS.some(kw => lower.includes(kw));
 }
 
 function parseRSS(xml: string): NewsItem[] {
@@ -106,7 +110,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const items = all.filter(item => isRelevant(item.title, citySlug)).slice(0, 5);
+    const items = all.filter(item => isRelevant(item.title)).slice(0, 5);
     return NextResponse.json({ items });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'fetch failed' }, { status: 502 });
