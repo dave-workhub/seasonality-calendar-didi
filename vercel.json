@@ -5,6 +5,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/cron/refresh-news",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/cron/weekly-news-summary",
       "schedule": "0 8 * * 1"
     }

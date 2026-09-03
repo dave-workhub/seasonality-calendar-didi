@@ -65,7 +65,7 @@ export default function NewsFeed({ citySlug, cityName, authHeaders }: Props) {
           {monday ? `${cityName} — weekend summary` : `${cityName} — latest news`}
         </span>
         <span className="text-[10px] text-neutral-400">
-          {monday ? '· generated every Monday' : '· Google News · refreshes every 12h'}
+          {monday ? '· generated every Monday' : '· refreshes daily at 7am Bogotá'}
         </span>
       </div>
 

@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizedDidilabsEmail } from '@/lib/serverAuth';
 
 const NEWS_FEEDS: Record<string, string[]> = {
-  // CO cities: Google News works reliably for these
   cartagena: ['https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es'],
   medellin:  [
     'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
     'https://h13n.com/feed/',
   ],
-  // MX cities: local newspaper RSS feeds (Google News returns empty for these from Vercel IPs)
   saltillo: [
     'https://elheraldodesaltillo.mx/feed/',
     'https://www.zocalo.com.mx/category/saltillo/feed/',
@@ -20,6 +18,15 @@ const NEWS_FEEDS: Record<string, string[]> = {
     'https://enfoquenoticias.com.mx/feed/',
     'https://www.yucatan.com.mx/feed/',
   ],
+};
+
+// Terms that anchor a headline to the city — catches local news even without demand keywords
+const CITY_TERMS: Record<string, string[]> = {
+  cartagena:  ['cartagena'],
+  medellin:   ['medellín', 'medellin', 'antioquia'],
+  saltillo:   ['saltillo', 'coahuila'],
+  hermosillo: ['hermosillo', 'sonora'],
+  merida:     ['mérida', 'merida', 'yucatán', 'yucatan'],
 };
 
 const DEMAND_KEYWORDS = [
@@ -36,9 +43,11 @@ export interface NewsItem {
   pubDate: string;
 }
 
-function isRelevant(title: string): boolean {
+function isRelevant(title: string, citySlug: string): boolean {
   const lower = title.toLowerCase();
-  return DEMAND_KEYWORDS.some(kw => lower.includes(kw));
+  const hasDemand = DEMAND_KEYWORDS.some(kw => lower.includes(kw));
+  const hasCity = (CITY_TERMS[citySlug] ?? []).some(t => lower.includes(t));
+  return hasDemand || hasCity;
 }
 
 function parseRSS(xml: string): NewsItem[] {
@@ -78,7 +87,7 @@ export async function GET(req: NextRequest) {
   try {
     const results = await Promise.allSettled(
       feedUrls.map(url =>
-        fetch(url, { next: { revalidate: 43200 }, headers: HEADERS })
+        fetch(url, { next: { tags: ['news'] }, headers: HEADERS })
           .then(r => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
           .then(xml => parseRSS(xml))
       )
@@ -97,12 +106,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (all.length === 0) {
-      return NextResponse.json({ items: [] });
-    }
-
-    const relevant = all.filter(item => isRelevant(item.title));
-    return NextResponse.json({ items: (relevant.length > 0 ? relevant : all).slice(0, 5) });
+    const items = all.filter(item => isRelevant(item.title, citySlug)).slice(0, 5);
+    return NextResponse.json({ items });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'fetch failed' }, { status: 502 });
   }
