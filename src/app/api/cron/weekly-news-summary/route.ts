@@ -4,11 +4,11 @@ import { ALL_CITIES } from '@/lib/cities';
 import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 const NEWS_FEEDS: Record<string, string> = {
-  cartagena:  'https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-419&gl=US&ceid=US:es',
-  medellin:   'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-419&gl=US&ceid=US:es',
-  saltillo:   'https://news.google.com/rss/search?q=Saltillo+Mexico&hl=es-419&gl=US&ceid=US:es',
-  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Mexico&hl=es-419&gl=US&ceid=US:es',
-  merida:     'https://news.google.com/rss/search?q=Merida+Yucatan+Mexico&hl=es-419&gl=US&ceid=US:es',
+  cartagena:  'https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  medellin:   'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  saltillo:   'https://news.google.com/rss/search?q=Saltillo+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
+  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
+  merida:     'https://news.google.com/rss/search?q=Merida+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
 };
 
 function parseHeadlines(xml: string): string[] {
