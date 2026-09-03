@@ -3,19 +3,33 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ALL_CITIES } from '@/lib/cities';
 import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
-const NEWS_FEEDS: Record<string, string> = {
-  cartagena:  'https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
-  medellin:   'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
-  saltillo:   'https://news.google.com/rss/search?q=Saltillo+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
-  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
-  merida:     'https://news.google.com/rss/search?q=Merida+Mexico&hl=es-MX&gl=MX&ceid=MX:es',
+const NEWS_FEEDS: Record<string, string[]> = {
+  cartagena:  ['https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es'],
+  medellin:   ['https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es'],
+  saltillo:   [
+    'https://elheraldodesaltillo.mx/feed/',
+    'https://www.zocalo.com.mx/category/saltillo/feed/',
+  ],
+  hermosillo: [
+    'https://www.elimparcial.com/arc/outboundfeeds/rss/',
+  ],
+  merida: [
+    'https://enfoquenoticias.com.mx/feed/',
+    'https://www.yucatan.com.mx/feed/',
+  ],
+};
+
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'es-419,es;q=0.9,en;q=0.7',
 };
 
 function parseHeadlines(xml: string): string[] {
   const headlines: string[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
-  while ((match = itemRegex.exec(xml)) !== null && headlines.length < 10) {
+  while ((match = itemRegex.exec(xml)) !== null && headlines.length < 15) {
     const block = match[1];
     const rawTitle =
       block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
@@ -26,6 +40,22 @@ function parseHeadlines(xml: string): string[] {
     if (title) headlines.push(title);
   }
   return headlines;
+}
+
+async function fetchHeadlinesForCity(feedUrls: string[]): Promise<string[]> {
+  const results = await Promise.allSettled(
+    feedUrls.map(url => fetch(url, { headers: HEADERS }).then(r => r.ok ? r.text() : Promise.reject()))
+  );
+  const seen = new Set<string>();
+  const all: string[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const h of parseHeadlines(result.value)) {
+        if (!seen.has(h)) { seen.add(h); all.push(h); }
+      }
+    }
+  }
+  return all.slice(0, 10);
 }
 
 function mondayOfCurrentWeek(): string {
@@ -57,21 +87,11 @@ export async function GET(req: NextRequest) {
   const results: Record<string, string> = {};
 
   for (const city of ALL_CITIES) {
-    const feedUrl = NEWS_FEEDS[city.slug];
-    if (!feedUrl) continue;
+    const feedUrls = NEWS_FEEDS[city.slug];
+    if (!feedUrls) continue;
 
     try {
-      const rssRes = await fetch(feedUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'es-419,es;q=0.9,en;q=0.7',
-        },
-      });
-      if (!rssRes.ok) { results[city.slug] = `rss error ${rssRes.status}`; continue; }
-
-      const xml = await rssRes.text();
-      const headlines = parseHeadlines(xml);
+      const headlines = await fetchHeadlinesForCity(feedUrls);
       if (headlines.length === 0) { results[city.slug] = 'no headlines'; continue; }
 
       const response = await anthropic.messages.create({
