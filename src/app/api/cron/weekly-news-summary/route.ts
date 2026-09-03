@@ -5,7 +5,10 @@ import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 const NEWS_FEEDS: Record<string, string[]> = {
   cartagena:  ['https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es'],
-  medellin:   ['https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es'],
+  medellin:   [
+    'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+    'https://h13n.com/feed/',
+  ],
   saltillo:   [
     'https://elheraldodesaltillo.mx/feed/',
     'https://www.zocalo.com.mx/category/saltillo/feed/',
