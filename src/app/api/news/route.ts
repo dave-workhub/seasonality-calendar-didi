@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthorizedDidilabsEmail } from '@/lib/serverAuth';
 
-// Keywords: traffic/roads, weather, protests/strikes, events/festivals, accidents
-const CO_KEYWORDS = '%28movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento%29';
-const MX_KEYWORDS = '%28movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento%29';
-
 const NEWS_FEEDS: Record<string, string> = {
-  cartagena: `https://news.google.com/rss/search?q=Cartagena+Colombia+${CO_KEYWORDS}&hl=es-CO&gl=CO&ceid=CO:es`,
-  medellin: `https://news.google.com/rss/search?q=Medell%C3%ADn+Colombia+${CO_KEYWORDS}&hl=es-CO&gl=CO&ceid=CO:es`,
-  saltillo: `https://news.google.com/rss/search?q=Saltillo+Coahuila+${MX_KEYWORDS}&hl=es-MX&gl=MX&ceid=MX:es`,
-  hermosillo: `https://news.google.com/rss/search?q=Hermosillo+Sonora+${MX_KEYWORDS}&hl=es-MX&gl=MX&ceid=MX:es`,
-  merida: `https://news.google.com/rss/search?q=M%C3%A9rida+Yucat%C3%A1n+${MX_KEYWORDS}&hl=es-MX&gl=MX&ceid=MX:es`,
+  cartagena:  'https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  medellin:   'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  saltillo:   'https://news.google.com/rss/search?q=Saltillo+Coahuila&hl=es-MX&gl=MX&ceid=MX:es',
+  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Sonora&hl=es-MX&gl=MX&ceid=MX:es',
+  merida:     'https://news.google.com/rss/search?q=Merida+Yucatan&hl=es-MX&gl=MX&ceid=MX:es',
 };
+
+// Demand/mobility relevance filter applied server-side
+const DEMAND_KEYWORDS = [
+  'movilidad','tráfico','trafico','protesta','manifestación','manifestacion',
+  'paro','huelga','bloqueo','concierto','festival','feria','clima','lluvia',
+  'inundación','inundacion','accidente','cierre','tormenta','evento',
+  'desvío','desvio','transporte','vialidad','carretera',
+];
 
 export interface NewsItem {
   title: string;
@@ -20,11 +24,16 @@ export interface NewsItem {
   pubDate: string;
 }
 
+function isRelevant(title: string): boolean {
+  const lower = title.toLowerCase();
+  return DEMAND_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 function parseItems(xml: string): NewsItem[] {
-  const items: NewsItem[] = [];
+  const all: NewsItem[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
-  while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+  while ((match = itemRegex.exec(xml)) !== null && all.length < 20) {
     const block = match[1];
     const rawTitle =
       block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
@@ -33,12 +42,13 @@ function parseItems(xml: string): NewsItem[] {
     const link = block.match(/<link>(.*?)<\/link>/)?.[1]?.trim() || '';
     const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim() || '';
     const source = block.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1]?.trim() || '';
-    // Google News titles are "Headline - Source Name" — strip the source suffix
     const dashIdx = rawTitle.lastIndexOf(' - ');
     const title = (dashIdx > 0 ? rawTitle.slice(0, dashIdx) : rawTitle).trim();
-    if (title && link) items.push({ title, link, source, pubDate });
+    if (title && link) all.push({ title, link, source, pubDate });
   }
-  return items;
+  // Prefer keyword-relevant items; fall back to showing all if none match
+  const relevant = all.filter(item => isRelevant(item.title));
+  return (relevant.length > 0 ? relevant : all).slice(0, 5);
 }
 
 export async function GET(req: NextRequest) {

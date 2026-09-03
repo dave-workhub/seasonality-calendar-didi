@@ -4,11 +4,11 @@ import { ALL_CITIES } from '@/lib/cities';
 import { supabaseAdmin, supabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 const NEWS_FEEDS: Record<string, string> = {
-  cartagena: 'https://news.google.com/rss/search?q=Cartagena+Colombia+(movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento)&hl=es-CO&gl=CO&ceid=CO:es',
-  medellin: 'https://news.google.com/rss/search?q=Medell%C3%ADn+Colombia+(movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento)&hl=es-CO&gl=CO&ceid=CO:es',
-  saltillo: 'https://news.google.com/rss/search?q=Saltillo+Coahuila+(movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento)&hl=es-MX&gl=MX&ceid=MX:es',
-  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Sonora+(movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento)&hl=es-MX&gl=MX&ceid=MX:es',
-  merida: 'https://news.google.com/rss/search?q=M%C3%A9rida+Yucat%C3%A1n+(movilidad+OR+tr%C3%A1fico+OR+protesta+OR+manifestaci%C3%B3n+OR+paro+OR+huelga+OR+bloqueo+OR+concierto+OR+festival+OR+clima+OR+lluvia+OR+inundaci%C3%B3n+OR+accidente+OR+cierre+OR+tormenta+OR+evento)&hl=es-MX&gl=MX&ceid=MX:es',
+  cartagena:  'https://news.google.com/rss/search?q=Cartagena+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  medellin:   'https://news.google.com/rss/search?q=Medellin+Colombia&hl=es-CO&gl=CO&ceid=CO:es',
+  saltillo:   'https://news.google.com/rss/search?q=Saltillo+Coahuila&hl=es-MX&gl=MX&ceid=MX:es',
+  hermosillo: 'https://news.google.com/rss/search?q=Hermosillo+Sonora&hl=es-MX&gl=MX&ceid=MX:es',
+  merida:     'https://news.google.com/rss/search?q=Merida+Yucatan&hl=es-MX&gl=MX&ceid=MX:es',
 };
 
 function parseHeadlines(xml: string): string[] {
