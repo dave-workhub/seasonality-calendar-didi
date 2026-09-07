@@ -20,7 +20,7 @@ const NEWS_FEEDS: Record<string, string[]> = {
   ],
 };
 
-// Only show headlines that clearly relate to mobility, weather, or demand-moving events.
+// Only show headlines that relate to mobility, weather, or demand-moving events.
 // No city-name fallback — a random arrest mentioning the city should not appear.
 const RELEVANT_KEYWORDS = [
   // Traffic & road infrastructure
@@ -28,6 +28,7 @@ const RELEVANT_KEYWORDS = [
   'cierre', 'desvío', 'desvio', 'bloqueo', 'accidente', 'choque',
   'obras', 'puente', 'bache', 'hundimiento', 'derrumbe', 'deslizamiento',
   'semáforo', 'semaforo', 'transporte',
+  'restricción vial', 'restriccion vial', 'pico y placa',
   // Strikes & protests (can block roads / reduce demand)
   'huelga', 'paro', 'protesta', 'manifestación', 'manifestacion', 'marcha',
   'camioneros', 'choferes', 'metrobús', 'metrobus',
@@ -36,8 +37,18 @@ const RELEVANT_KEYWORDS = [
   'huracán', 'huracan', 'ciclón', 'ciclon', 'granizo',
   'frente frío', 'frente frio', 'calor extremo', 'ola de calor',
   'precipitación', 'precipitacion', 'alerta meteoro', 'alerta por lluvia',
-  // Events & demand (concerts, fairs, school breaks, holidays)
+  // Sporting events & mass gatherings (close streets, move people)
+  'triatlón', 'triatlon', 'ironman',
+  'maratón', 'maraton', 'media maratón', 'media maraton',
+  'ciclismo', 'ciclovía', 'ciclovia', 'rodada',
+  'carrera popular', 'carrera atlética', 'carrera atletica',
+  'evento deportivo', 'competencia',
+  // Religious & civic processions (huge in CO cities — close streets)
+  'procesión', 'procesion', 'peregrinación', 'peregrinacion',
+  'semana santa', 'corpus christi',
+  // Concerts, festivals, fairs, school calendar, holidays
   'concierto', 'festival', 'feria', 'carnaval', 'desfile',
+  'fiestas de', 'evento masivo',
   'regreso a clases', 'inicio de clases', 'vacaciones escolares',
   'feriado', 'asueto', 'puente vacacional', 'día festivo', 'dia festivo',
 ];
