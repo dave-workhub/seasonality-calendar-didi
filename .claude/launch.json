@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "seasonality-calendar-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "seasonality-calendar", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

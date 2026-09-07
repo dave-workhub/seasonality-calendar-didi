@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
   try {
     const results = await Promise.allSettled(
       feedUrls.map(url =>
-        fetch(url, { next: { tags: ['news'] }, headers: HEADERS })
+        fetch(url, { next: { revalidate: 86400 }, headers: HEADERS })
           .then(r => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
           .then(xml => parseRSS(xml))
       )
